@@ -36,7 +36,6 @@
           </label>
           <p class="hint" data-i18n="tokenHint"></p>
           <div class="row">
-            <button id="saveToken" type="button" data-i18n="saveToken">Save token</button>
             <button id="forgetToken" type="button" class="ghost" data-i18n="forgetToken">Forget token</button>
             <span id="tokenStatus" class="status" role="status"></span>
           </div>
@@ -47,10 +46,7 @@
             <textarea id="repos" rows="3" spellcheck="false" placeholder="owner/repo"></textarea>
           </label>
           <p class="hint" data-i18n="reposHint"></p>
-          <div class="row">
-            <button id="saveRepos" type="button" data-i18n="saveRepos">Save repositories</button>
-            <span id="reposStatus" class="status" role="status"></span>
-          </div>
+          <span id="reposStatus" class="status" role="status"></span>
         </div>
       </div>
     </details>
@@ -86,14 +82,17 @@
     </div>
 
     <section class="panel">
-      <h2 data-i18n="output">Output</h2>
+      <div class="panel-head">
+        <h2 data-i18n="output">Output</h2>
+        <div class="row">
+          <span id="copyStatus" class="status" role="status"></span>
+          <button id="copySlack" type="button" data-i18n="copySlack">Copy for Slack</button>
+          <button id="copyGithub" type="button" data-i18n="copyGithub">Copy for GitHub</button>
+        </div>
+      </div>
       <p class="hint" data-i18n="outputHint"></p>
       <label class="sr-only" for="output" data-i18n="output">Output</label>
       <textarea id="output" rows="14" spellcheck="false"></textarea>
-      <div class="row">
-        <button id="copy" type="button" data-i18n="copy">Copy</button>
-        <span id="copyStatus" class="status" role="status"></span>
-      </div>
     </section>
   </main>
 </body>

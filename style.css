@@ -104,6 +104,9 @@ details[open] summary { margin-bottom: 12px; }
 .card-fields > .f-ref,
 .subtask > .f-desc { flex: 2 1 190px; }
 
+.card-fields > .f-date,
+.subtask > .f-date { flex-basis: 135px; }
+
 .card-fields > .icon-btn,
 .subtask > .icon-btn { flex: none; }
 
@@ -188,6 +191,18 @@ button.ghost { background: transparent; }
 }
 
 .row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.panel-head h2 { margin: 0; }
+.panel-head + .hint { margin-bottom: 8px; }
 .actions { display: flex; justify-content: center; }
 
 .hint { margin: 0; font-size: 0.85rem; color: var(--muted); }

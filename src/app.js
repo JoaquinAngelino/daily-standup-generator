@@ -13,6 +13,7 @@ import {
   issueNode,
   toMarkdown,
   markdownToHtml,
+  markdownToSlackText,
 } from "./lib.js";
 import { createClient, GitHubError } from "./github.js";
 import { t, setLanguage, applyTranslations } from "./i18n.js";
@@ -132,7 +133,7 @@ function field(obj, key, labelKey, { type = "text", options, placeholder, classN
       oninput: () => { obj[key] = control.value; save(); },
     });
   }
-  return el("label", { class: `field ${className}` }, [el("span", { textContent: t(labelKey) }), control]);
+  return el("label", { class: `field ${className}${type === "date" ? " f-date" : ""}` }, [el("span", { textContent: t(labelKey) }), control]);
 }
 
 function repoField(row) {
@@ -360,21 +361,22 @@ async function generate() {
   }
 }
 
-async function copyOutput() {
+// GitHub gets plain Markdown only: with HTML on the clipboard its editor may convert the paste.
+async function copyOutput(target) {
   const markdown = $("#output").value.trim();
   if (!markdown) return;
   try {
-    if (window.ClipboardItem && navigator.clipboard?.write) {
+    if (target === "slack" && window.ClipboardItem && navigator.clipboard?.write) {
       await navigator.clipboard.write([
         new ClipboardItem({
-          "text/plain": new Blob([markdown], { type: "text/plain" }),
+          "text/plain": new Blob([markdownToSlackText(markdown)], { type: "text/plain" }),
           "text/html": new Blob([markdownToHtml(markdown)], { type: "text/html" }),
         }),
       ]);
     } else {
-      await navigator.clipboard.writeText(markdown);
+      await navigator.clipboard.writeText(target === "slack" ? markdownToSlackText(markdown) : markdown);
     }
-    setStatus("#copyStatus", () => t("copied"), "ok");
+    setStatus("#copyStatus", () => t(target === "slack" ? "copiedSlack" : "copiedGithub"), "ok");
   } catch {
     setStatus("#copyStatus", () => t("copyFailed"), "error");
   }
@@ -382,6 +384,10 @@ async function copyOutput() {
 
 async function checkToken() {
   const token = getToken();
+  const input = $("#token");
+  if (token) input.dataset.i18nPlaceholder = "tokenSavedPlaceholder";
+  else delete input.dataset.i18nPlaceholder;
+  input.placeholder = token ? t("tokenSavedPlaceholder") : "";
   if (!token) return setStatus("#tokenStatus", () => t("tokenNone"));
   setStatus("#tokenStatus", () => t("tokenChecking"));
   try {
@@ -392,32 +398,45 @@ async function checkToken() {
   }
 }
 
-function saveToken() {
-  const input = $("#token");
-  const value = input.value.trim();
-  if (!value) return setStatus("#tokenStatus", () => t("tokenEmpty"), "error");
+function storeToken(value) {
   const remember = $("#remember").checked;
   write(remember ? local : session, TOKEN_KEY, value);
   write(remember ? session : local, TOKEN_KEY, null);
+}
+
+function saveToken() {
+  const input = $("#token");
+  const value = input.value.trim();
+  if (!value) return;
+  storeToken(value);
   input.value = "";
   checkToken();
+}
+
+function changeRemember() {
+  const token = getToken();
+  if (token) storeToken(token);
 }
 
 function forgetToken() {
   write(local, TOKEN_KEY, null);
   write(session, TOKEN_KEY, null);
-  $("#remember").checked = false;
   checkToken();
 }
 
-function saveRepos() {
-  const repos = parseRepoList($("#repos").value);
-  if (!repos.length) return setStatus("#reposStatus", () => t("reposEmpty"), "error");
-  state.repos = repos;
-  $("#repos").value = repos.join("\n");
+function updateRepos() {
+  state.repos = parseRepoList($("#repos").value);
   save();
+}
+
+function commitRepos() {
+  updateRepos();
   render();
-  setStatus("#reposStatus", () => t("reposSaved", { count: repos.length }), "ok");
+  setStatus(
+    "#reposStatus",
+    () => (state.repos.length ? t("reposSaved", { count: state.repos.length }) : t("reposEmpty")),
+    state.repos.length ? "ok" : "error",
+  );
 }
 
 function changeLanguage(lang) {
@@ -436,17 +455,20 @@ function init() {
     if (!state.sections[key].length) state.sections[key].push(ROW_FACTORIES[key]());
   }
   $("#repos").value = state.repos.join("\n");
-  $("#remember").checked = Boolean(read(local, TOKEN_KEY));
+  $("#remember").checked = !read(session, TOKEN_KEY);
   $("#output").value = state.output;
   $("#settings").open = !getToken() || !state.repos.length;
 
   $("#language").addEventListener("change", (e) => changeLanguage(e.target.value));
-  $("#saveToken").addEventListener("click", saveToken);
+  $("#token").addEventListener("change", saveToken);
   $("#token").addEventListener("keydown", (e) => { if (e.key === "Enter") saveToken(); });
+  $("#remember").addEventListener("change", changeRemember);
   $("#forgetToken").addEventListener("click", forgetToken);
-  $("#saveRepos").addEventListener("click", saveRepos);
+  $("#repos").addEventListener("input", updateRepos);
+  $("#repos").addEventListener("change", commitRepos);
   $("#generate").addEventListener("click", generate);
-  $("#copy").addEventListener("click", copyOutput);
+  $("#copySlack").addEventListener("click", () => copyOutput("slack"));
+  $("#copyGithub").addEventListener("click", () => copyOutput("github"));
   $("#output").addEventListener("input", (e) => {
     state.output = e.target.value;
     save();

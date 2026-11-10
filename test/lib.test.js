@@ -11,6 +11,7 @@ import {
   issueNode,
   toMarkdown,
   markdownToHtml,
+  markdownToSlackText,
 } from "../src/lib.js";
 
 test("parseRepoList keeps valid unique owner/repo entries", () => {
@@ -101,4 +102,18 @@ test("markdownToHtml nests lists, escapes text and links only http(s)", () => {
 
 test("markdownToHtml handles 2-space indents from manual edits", () => {
   assert.equal(markdownToHtml("- a\n  - b\n- c"), "<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>");
+});
+
+test("markdownToHtml keeps one break between sections", () => {
+  assert.equal(
+    markdownToHtml("### A\n- x\n\n\n### B\n- y"),
+    "<div><u><b>A</b></u></div><ul><li>x</li></ul><br><div><u><b>B</b></u></div><ul><li>y</li></ul>",
+  );
+});
+
+test("markdownToSlackText converts to Slack syntax", () => {
+  assert.equal(
+    markdownToSlackText("### Completed\n- **GitHub Issue:** [7](https://x.io/7) — a\n    - **ETA:** 1"),
+    "*Completed*\n• *GitHub Issue:* 7 (https://x.io/7) — a\n    • *ETA:* 1",
+  );
 });

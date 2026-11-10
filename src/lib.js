@@ -148,7 +148,22 @@ export function markdownToHtml(md) {
     const heading = /^#{1,6}\s+(.*)$/.exec(line);
     if (heading) out.push(`<div><u><b>${inlineHtml(heading[1])}</b></u></div>`);
     else if (line) out.push(`<div>${inlineHtml(line)}</div>`);
+    else if (out.length && out.at(-1) !== "<br>") out.push("<br>");
   }
   closeTo(-1);
   return out.join("");
+}
+
+// Plain-text fallback in Slack's syntax, used when the browser cannot put HTML on the clipboard.
+export function markdownToSlackText(md) {
+  return String(md)
+    .split("\n")
+    .map((line) => {
+      const heading = /^#{1,6}\s+(.*)$/.exec(line);
+      return (heading ? `**${heading[1]}**` : line)
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1 ($2)")
+        .replace(/\*\*(.+?)\*\*/g, "*$1*")
+        .replace(/^(\s*)[-*]\s+/, "$1• ");
+    })
+    .join("\n");
 }
