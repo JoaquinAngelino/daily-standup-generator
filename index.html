@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Daily Standup Generator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6f5e'/%3E%3Cpath d='M9 11h14M9 16h10M9 21h7' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1 data-i18n="title">Daily Standup Generator</h1>
+    <label class="lang">
+      <span class="sr-only" data-i18n="language">Language</span>
+      <select id="language">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+    </label>
+  </header>
+
+  <main>
+    <details id="settings" class="panel">
+      <summary data-i18n="settings">Settings</summary>
+      <div class="settings">
+        <div class="setting">
+          <label class="field">
+            <span data-i18n="token">GitHub token</span>
+            <input id="token" type="password" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="check">
+            <input id="remember" type="checkbox">
+            <span data-i18n="remember">Remember on this device</span>
+          </label>
+          <p class="hint" data-i18n="tokenHint"></p>
+          <div class="row">
+            <button id="saveToken" type="button" data-i18n="saveToken">Save token</button>
+            <button id="forgetToken" type="button" class="ghost" data-i18n="forgetToken">Forget token</button>
+            <span id="tokenStatus" class="status" role="status"></span>
+          </div>
+        </div>
+        <div class="setting">
+          <label class="field">
+            <span data-i18n="repos">Repositories</span>
+            <textarea id="repos" rows="3" spellcheck="false" placeholder="owner/repo"></textarea>
+          </label>
+          <p class="hint" data-i18n="reposHint"></p>
+          <div class="row">
+            <button id="saveRepos" type="button" data-i18n="saveRepos">Save repositories</button>
+            <span id="reposStatus" class="status" role="status"></span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <section class="panel" data-section="completed">
+      <h2 data-i18n="completed">Completed</h2>
+      <div class="rows"></div>
+      <button type="button" class="link-btn" data-add data-i18n="addIssue">+ Issue</button>
+    </section>
+
+    <section class="panel" data-section="inProgress">
+      <h2 data-i18n="inProgress">In Progress</h2>
+      <div class="rows"></div>
+      <button type="button" class="link-btn" data-add data-i18n="addIssue">+ Issue</button>
+    </section>
+
+    <section class="panel" data-section="upcoming">
+      <h2 data-i18n="upcoming">Upcoming</h2>
+      <div class="rows"></div>
+      <button type="button" class="link-btn" data-add data-i18n="addIssue">+ Issue</button>
+    </section>
+
+    <section class="panel" data-section="prs">
+      <h2 data-i18n="prs">PR Review</h2>
+      <div class="rows"></div>
+      <button type="button" class="link-btn" data-add data-i18n="addPr">+ PR</button>
+    </section>
+
+    <div id="banner" class="banner" role="alert" hidden></div>
+
+    <div class="actions">
+      <button id="generate" type="button" class="primary" data-i18n="generate">Generate</button>
+    </div>
+
+    <section class="panel">
+      <h2 data-i18n="output">Output</h2>
+      <p class="hint" data-i18n="outputHint"></p>
+      <label class="sr-only" for="output" data-i18n="output">Output</label>
+      <textarea id="output" rows="14" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="copy" type="button" data-i18n="copy">Copy</button>
+        <span id="copyStatus" class="status" role="status"></span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,104 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  parseRepoList,
+  parseRef,
+  formatRange,
+  formatProjected,
+  reviewStatus,
+  findIssueRef,
+  node,
+  issueNode,
+  toMarkdown,
+  markdownToHtml,
+} from "../src/lib.js";
+
+test("parseRepoList keeps valid unique owner/repo entries", () => {
+  assert.deepEqual(parseRepoList("a/b\n a/b, c/d.e\nnot-a-repo"), ["a/b", "c/d.e"]);
+});
+
+test("parseRef accepts number, #number, owner/repo#number and URLs", () => {
+  assert.deepEqual(parseRef("12", "o/r"), { repo: "o/r", number: 12 });
+  assert.deepEqual(parseRef("#12", "o/r"), { repo: "o/r", number: 12 });
+  assert.deepEqual(parseRef("x/y#7", "o/r"), { repo: "x/y", number: 7 });
+  assert.deepEqual(parseRef("https://github.com/x/y/pull/9/files", "o/r"), { repo: "x/y", number: 9 });
+  assert.deepEqual(parseRef("x/y12", "o/r"), null);
+  assert.equal(parseRef("12", ""), null);
+  assert.equal(parseRef("  ", "o/r"), null);
+});
+
+test("formatRange and formatProjected", () => {
+  assert.equal(formatRange("2026-11-03", "2026-11-05"), "11-03 -> 11-05");
+  assert.equal(formatRange("", "2026-11-05"), "11-05");
+  assert.equal(formatProjected("2026-11-10", "Pending merge"), "11-10 Pending merge");
+  assert.equal(formatProjected("", ""), "");
+});
+
+test("reviewStatus uses PR state, then latest opinionated reviews", () => {
+  const reviews = (...states) => ({ nodes: states.map((state) => ({ state })) });
+  assert.equal(reviewStatus({ state: "MERGED", latestOpinionatedReviews: reviews("CHANGES_REQUESTED") }), "Merged");
+  assert.equal(reviewStatus({ state: "OPEN", isDraft: true }), "Draft");
+  assert.equal(reviewStatus({ state: "OPEN", latestOpinionatedReviews: reviews("APPROVED", "CHANGES_REQUESTED") }), "Changes Requested");
+  assert.equal(reviewStatus({ state: "OPEN", latestOpinionatedReviews: reviews("APPROVED") }), "Approved");
+  assert.equal(reviewStatus({ state: "OPEN", latestOpinionatedReviews: reviews() }), "Pending");
+});
+
+test("findIssueRef prefers closing keywords and keeps the PR repo", () => {
+  assert.deepEqual(findIssueRef({ title: "Fix (#3)", body: "See #1. Closes #42" }, "o/r"), { repo: "o/r", number: 42 });
+  assert.deepEqual(findIssueRef({ title: "x", body: "fixes other/repo#5" }, "o/r"), { repo: "other/repo", number: 5 });
+  assert.deepEqual(findIssueRef({ title: "Feature (#3)", body: "" }, "o/r"), { repo: "o/r", number: 3 });
+  assert.deepEqual(findIssueRef({ title: "x", body: "https://github.com/a/b/issues/8" }, "o/r"), { repo: "a/b", number: 8 });
+  assert.deepEqual(findIssueRef({ title: "x", body: "related to #11" }, "o/r"), { repo: "o/r", number: 11 });
+  assert.equal(findIssueRef({ title: "x", body: "color &#35;fff" }, "o/r"), null);
+});
+
+const issue = { number: 7, title: "Login <fails>", url: "https://github.com/o/r/issues/7" };
+
+test("toMarkdown renders sections, nesting and skips empty values", () => {
+  const md = toMarkdown([
+    {
+      title: "Completed",
+      items: [
+        issueNode(issue, [
+          node("ETA", "11-03 -> 11-05"),
+          node("Projected Overall Feature Delivery (Alpha)", ""),
+          node("Subtask description", "API", [node("ETA", "11-04")]),
+        ]),
+      ],
+    },
+    { title: "Upcoming", items: [] },
+    { title: "PR Review", items: [node("PR", "[9](https://github.com/o/r/pull/9) — Fix", [node("Status", "Approved")])] },
+  ]);
+  assert.equal(
+    md,
+    [
+      "### Completed",
+      "- **GitHub Issue:** [7](https://github.com/o/r/issues/7) — Login <fails>",
+      "    - **ETA:** 11-03 -> 11-05",
+      "    - **Subtask description:** API",
+      "        - **ETA:** 11-04",
+      "",
+      "### PR Review",
+      "- **PR:** [9](https://github.com/o/r/pull/9) — Fix",
+      "    - **Status:** Approved",
+    ].join("\n"),
+  );
+});
+
+test("markdownToHtml nests lists, escapes text and links only http(s)", () => {
+  const html = markdownToHtml(
+    "### Done\n- **Issue:** [7](https://x.io/7) — a <b>\n    - **ETA:** 1\n        - deep\n- next [js](javascript:alert(1))\nplain",
+  );
+  assert.equal(
+    html,
+    '<div><u><b>Done</b></u></div>' +
+      '<ul><li><b>Issue:</b> <a href="https://x.io/7">7</a> — a &lt;b&gt;' +
+      "<ul><li><b>ETA:</b> 1<ul><li>deep</li></ul></li></ul>" +
+      "</li><li>next [js](javascript:alert(1))</li></ul>" +
+      "<div>plain</div>",
+  );
+});
+
+test("markdownToHtml handles 2-space indents from manual edits", () => {
+  assert.equal(markdownToHtml("- a\n  - b\n- c"), "<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>");
+});
