@@ -12,7 +12,19 @@ import {
   toMarkdown,
   markdownToHtml,
   markdownToSlackText,
+  advanceRow,
 } from "../src/lib.js";
+
+test("advanceRow maps ETAs onto the next stage and drops stage-only state", () => {
+  const upcoming = { id: "a", ref: "5", repo: "o/r", title: "T", eta: "2026-11-14", reportedOn: "x", subtasks: [{ id: "s", desc: "d", eta: "2026-11-13" }] };
+  assert.deepEqual(advanceRow(upcoming, "inProgress"), {
+    id: "a", ref: "5", repo: "o/r", title: "T", eta: "2026-11-14", subtasks: [{ id: "s", desc: "d", eta: "2026-11-13" }],
+  });
+  assert.deepEqual(advanceRow(upcoming, "completed"), {
+    id: "a", ref: "5", repo: "o/r", title: "T", etaFrom: "", etaTo: "2026-11-14", projDate: "", projStatus: "",
+    subtasks: [{ id: "s", desc: "d", etaFrom: "", etaTo: "2026-11-13", projDate: "", projStatus: "" }],
+  });
+});
 
 test("parseRepoList keeps valid unique owner/repo entries", () => {
   assert.deepEqual(parseRepoList("a/b\n a/b, c/d.e\nnot-a-repo"), ["a/b", "c/d.e"]);

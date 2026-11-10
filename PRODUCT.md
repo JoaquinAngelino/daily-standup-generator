@@ -1,0 +1,42 @@
+# Product
+
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+web
+
+## Users
+
+Primarily one developer (the repo owner) on the rhuang projects (`juristium-clone`, `jdivorce-ui`), writing their own standup update every working morning. Teammates may use it occasionally; it is not a public product.
+
+## Product Purpose
+
+Turns a short list of GitHub issue and PR numbers into the team's standup update, with titles, links, ETAs, projected delivery and PR review status filled in from GitHub. Success: the morning standup is ready to paste in a minute or two, and every link, title and status in it is correct.
+
+## Positioning
+
+The user types numbers and dates; GitHub supplies everything else (titles, links, linked issues, review state). The list survives from one day to the next, so each morning is an edit of yesterday's standup rather than a fresh entry.
+
+## Operating Context
+
+- Used each workday morning, just before standup, in a desktop browser.
+- Output is pasted into Slack (rich text) or GitHub (Markdown); both are first-class.
+- Items move across days: Upcoming, then In Progress, then Completed, then dropped. PRs under review come and go.
+- Current pain points (2026-11): entering items each morning takes too long, carrying items over between sections is manual, and the layout reads as a clunky form.
+
+## Capabilities and Constraints
+
+- Sections: Completed (ETA range, projected delivery date plus status, subtasks), In Progress and Upcoming (ETA, subtasks), PR Review (PR plus repo).
+- References accepted as `123`, `owner/repo#123`, or a GitHub issue/PR URL; repos are configured in the app, the first being the default.
+- The output format is a team convention and must not change: `### Section` headings; `- **GitHub Issue:** [n](url) — title`; nested `**ETA:**`, `**Projected Overall Feature Delivery (Alpha):**`, `**Subtask description:**`; PR items with `**GitHub Issue:**` and `**Status:**`.
+- Static site on GitHub Pages: plain HTML, CSS and JavaScript modules, no build step, no backend. All state (rows, settings, token) lives in the browser and survives restarts.
+- Read-only GitHub access through a user-supplied token (REST for issues, GraphQL for PRs).
+- UI languages: English and Spanish. Generated standup text is always English.
+
+## Product Principles
+
+- Each morning is an edit of yesterday, never a re-entry.
+- Type numbers, not facts: anything GitHub knows is fetched, never typed.
+- The pasted text is a contract with the team; the interface can change freely, the output format cannot.
+- One bad item never blocks the standup: failures are reported per item and the rest still generates.

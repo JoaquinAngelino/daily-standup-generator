@@ -5,29 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Daily Standup Generator</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6f5e'/%3E%3Cpath d='M9 11h14M9 16h10M9 21h7' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect y='9' width='32' height='14' fill='%231d8a4e'/%3E%3Cpath d='M7 16h18' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/barlow-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="src/app.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <h1 data-i18n="title">Daily Standup Generator</h1>
-    <label class="lang">
-      <span class="sr-only" data-i18n="language">Language</span>
-      <select id="language">
-        <option value="en">English</option>
-        <option value="es">Español</option>
-      </select>
-    </label>
-  </header>
+  <div class="layout">
+    <div class="main-col">
+      <header class="topbar">
+        <h1 class="brand" data-i18n="title">Daily Standup Generator</h1>
+        <span id="today" class="today"></span>
+        <button id="settingsToggle" type="button" class="btn" aria-expanded="false" aria-controls="settings" data-i18n="settings">Settings</button>
+        <label class="sr-only" for="language" data-i18n="language">Language</label>
+        <select id="language" class="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </header>
 
-  <main>
-    <details id="settings" class="panel">
-      <summary data-i18n="settings">Settings</summary>
-      <div class="settings">
+      <section id="settings" class="settings" hidden>
         <div class="setting">
           <label class="field">
-            <span data-i18n="token">GitHub token</span>
+            <span class="field-label" data-i18n="token">GitHub token</span>
             <input id="token" type="password" autocomplete="off" spellcheck="false">
           </label>
           <label class="check">
@@ -36,64 +36,78 @@
           </label>
           <p class="hint" data-i18n="tokenHint"></p>
           <div class="row">
-            <button id="forgetToken" type="button" class="ghost" data-i18n="forgetToken">Forget token</button>
+            <button id="forgetToken" type="button" class="btn" data-i18n="forgetToken">Forget token</button>
             <span id="tokenStatus" class="status" role="status"></span>
           </div>
         </div>
         <div class="setting">
           <label class="field">
-            <span data-i18n="repos">Repositories</span>
+            <span class="field-label" data-i18n="repos">Repositories</span>
             <textarea id="repos" rows="3" spellcheck="false" placeholder="owner/repo"></textarea>
           </label>
           <p class="hint" data-i18n="reposHint"></p>
           <span id="reposStatus" class="status" role="status"></span>
         </div>
-      </div>
-    </details>
+      </section>
 
-    <section class="panel" data-section="completed">
-      <h2 data-i18n="completed">Completed</h2>
-      <div class="rows"></div>
-      <button type="button" class="link-btn" data-add data-i18n="addIssue">+ Issue</button>
-    </section>
+      <main class="work">
+        <section class="lane" data-section="completed" aria-labelledby="lane-completed">
+          <div class="lane-head">
+            <h2 id="lane-completed" class="tape tape--green" data-i18n="completed">Completed</h2>
+            <span class="lane-count"></span>
+            <span class="lane-tools"></span>
+            <button type="button" class="btn-text" data-add><span data-i18n="addIssue">Add issue</span></button>
+          </div>
+          <div class="rows"></div>
+        </section>
 
-    <section class="panel" data-section="inProgress">
-      <h2 data-i18n="inProgress">In Progress</h2>
-      <div class="rows"></div>
-      <button type="button" class="link-btn" data-add data-i18n="addIssue">+ Issue</button>
-    </section>
+        <section class="lane" data-section="inProgress" aria-labelledby="lane-inProgress">
+          <div class="lane-head">
+            <h2 id="lane-inProgress" class="tape tape--yellow" data-i18n="inProgress">In Progress</h2>
+            <span class="lane-count"></span>
+            <span class="lane-tools"></span>
+            <button type="button" class="btn-text" data-add><span data-i18n="addIssue">Add issue</span></button>
+          </div>
+          <div class="rows"></div>
+        </section>
 
-    <section class="panel" data-section="upcoming">
-      <h2 data-i18n="upcoming">Upcoming</h2>
-      <div class="rows"></div>
-      <button type="button" class="link-btn" data-add data-i18n="addIssue">+ Issue</button>
-    </section>
+        <section class="lane" data-section="upcoming" aria-labelledby="lane-upcoming">
+          <div class="lane-head">
+            <h2 id="lane-upcoming" class="tape tape--blue" data-i18n="upcoming">Upcoming</h2>
+            <span class="lane-count"></span>
+            <span class="lane-tools"></span>
+            <button type="button" class="btn-text" data-add><span data-i18n="addIssue">Add issue</span></button>
+          </div>
+          <div class="rows"></div>
+        </section>
 
-    <section class="panel" data-section="prs">
-      <h2 data-i18n="prs">PR Review</h2>
-      <div class="rows"></div>
-      <button type="button" class="link-btn" data-add data-i18n="addPr">+ PR</button>
-    </section>
-
-    <div id="banner" class="banner" role="alert" hidden></div>
-
-    <div class="actions">
-      <button id="generate" type="button" class="primary" data-i18n="generate">Generate</button>
+        <section class="lane" data-section="prs" aria-labelledby="lane-prs">
+          <div class="lane-head">
+            <h2 id="lane-prs" class="tape tape--red" data-i18n="prs">PR Review</h2>
+            <span class="lane-count"></span>
+            <span class="lane-tools"></span>
+            <button type="button" class="btn-text" data-add><span data-i18n="addPr">Add PR</span></button>
+          </div>
+          <div class="rows"></div>
+        </section>
+      </main>
     </div>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2 data-i18n="output">Output</h2>
-        <div class="row">
-          <span id="copyStatus" class="status" role="status"></span>
-          <button id="copySlack" type="button" data-i18n="copySlack">Copy for Slack</button>
-          <button id="copyGithub" type="button" data-i18n="copyGithub">Copy for GitHub</button>
-        </div>
+    <aside class="output" aria-labelledby="output-title">
+      <div class="output-head">
+        <h2 id="output-title" data-i18n="output">Output</h2>
+        <span id="copyStatus" class="status" role="status"></span>
+        <button id="copySlack" type="button" class="btn" data-i18n="copySlack">Copy for Slack</button>
+        <button id="copyGithub" type="button" class="btn" data-i18n="copyGithub">Copy for GitHub</button>
       </div>
-      <p class="hint" data-i18n="outputHint"></p>
+      <div id="banner" class="banner" role="alert" hidden></div>
       <label class="sr-only" for="output" data-i18n="output">Output</label>
-      <textarea id="output" rows="14" spellcheck="false"></textarea>
-    </section>
-  </main>
+      <textarea id="output" spellcheck="false"></textarea>
+      <div class="output-foot">
+        <p class="hint" data-i18n="outputHint"></p>
+        <button id="generate" type="button" class="tape tape--black generate" data-i18n="generate">Generate standup</button>
+      </div>
+    </aside>
+  </div>
 </body>
 </html>

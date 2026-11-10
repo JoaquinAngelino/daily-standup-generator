@@ -2,6 +2,8 @@ import {
   ISSUE_SECTIONS,
   SECTION_TITLES,
   PROJECTED_STATUSES,
+  NEXT_STAGE,
+  advanceRow,
   parseRepoList,
   parseRef,
   formatDate,
@@ -16,14 +18,22 @@ import {
   markdownToSlackText,
 } from "./lib.js";
 import { createClient, GitHubError } from "./github.js";
-import { t, setLanguage, applyTranslations } from "./i18n.js";
+import { t, setLanguage, getLanguage, applyTranslations } from "./i18n.js";
 
 const STATE_KEY = "dsg.state.v1";
 const TOKEN_KEY = "dsg.token";
 const LANG_KEY = "dsg.lang";
 const SECTIONS = [...ISSUE_SECTIONS, "prs"];
+const TONE = { completed: "green", inProgress: "yellow", upcoming: "blue", prs: "red" };
+const SVG_NS = "http://www.w3.org/2000/svg";
+const ICONS = {
+  x: "M4 4l8 8M12 4l-8 8",
+  plus: "M8 3v10M3 8h10",
+  arrow: "M3 8h10M9 4l4 4-4 4",
+};
 
 const $ = (sel) => document.querySelector(sel);
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function getStorage(kind) {
   try {
@@ -54,6 +64,11 @@ function write(store, key, value) {
   }
 }
 
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const uid = () => Math.random().toString(36).slice(2, 10);
 const defaultRepo = () => state.repos[0] ?? "";
 
@@ -80,7 +95,8 @@ function loadState() {
   const sections = {};
   for (const key of SECTIONS) {
     const rows = saved.sections?.[key];
-    sections[key] = Array.isArray(rows) ? rows : [];
+    sections[key] = Array.isArray(rows) ? rows.filter((r) => r && typeof r === "object") : [];
+    sections[key].forEach((r) => delete r.fetching);
   }
   return {
     repos: Array.isArray(saved.repos) ? saved.repos : [],
@@ -93,6 +109,7 @@ const state = loadState();
 const rowErrors = new Map();
 const statuses = new Map();
 let bannerText = null;
+let pressedId = null;
 
 function save() {
   write(local, STATE_KEY, JSON.stringify(state));
@@ -102,10 +119,12 @@ function getToken() {
   return read(session, TOKEN_KEY) || read(local, TOKEN_KEY) || "";
 }
 
+const isSpent = (row) => Boolean(row.reportedOn) && row.reportedOn < todayIso();
+
 function el(tag, props = {}, children = []) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) {
-    if (v == null) continue;
+    if (v == null || v === false) continue;
     if (k === "class") e.className = v;
     else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
     else if (k in e) e[k] = v;
@@ -115,12 +134,35 @@ function el(tag, props = {}, children = []) {
   return e;
 }
 
-function field(obj, key, labelKey, { type = "text", options, placeholder, className = "" } = {}) {
+function icon(name) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "icon");
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", ICONS[name]);
+  svg.append(path);
+  return svg;
+}
+
+function iconButton(name, label, onclick) {
+  return el("button", { type: "button", class: "icon-btn", title: label, "aria-label": label, onclick }, [icon(name)]);
+}
+
+function field(obj, key, labelKey, { type = "text", options, placeholder, className = "", hideLabel = false, onCommit } = {}) {
   let control;
+  const focusKey = `${obj.id}:${key}`;
   if (options) {
     control = el(
       "select",
-      { onchange: () => { obj[key] = control.value; save(); } },
+      {
+        "data-focus-key": focusKey,
+        onchange: () => {
+          obj[key] = control.value;
+          save();
+          onCommit?.();
+        },
+      },
       options.map(([value, label]) => el("option", { value, textContent: label })),
     );
     control.value = obj[key] ?? "";
@@ -130,98 +172,139 @@ function field(obj, key, labelKey, { type = "text", options, placeholder, classN
       value: obj[key] ?? "",
       placeholder,
       spellcheck: false,
-      oninput: () => { obj[key] = control.value; save(); },
+      "data-focus-key": focusKey,
+      oninput: () => {
+        obj[key] = control.value;
+        save();
+      },
     });
   }
-  return el("label", { class: `field ${className}${type === "date" ? " f-date" : ""}` }, [el("span", { textContent: t(labelKey) }), control]);
+  return el("label", { class: `field ${className}` }, [
+    el("span", { class: hideLabel ? "sr-only" : "field-label", textContent: t(labelKey) }),
+    control,
+  ]);
 }
 
-function repoField(row) {
-  if (!row.repo) row.repo = defaultRepo();
-  const repos = [...state.repos];
-  if (row.repo && !repos.includes(row.repo)) repos.push(row.repo);
-  if (!repos.length) repos.push("");
-  return field(row, "repo", "repo", { options: repos.map((r) => [r, r || "—"]), className: "f-repo" });
+function dateInput(obj, key, labelKey) {
+  const input = el("input", {
+    type: "date",
+    value: obj[key] ?? "",
+    class: obj[key] ? null : "is-empty",
+    "aria-label": t(labelKey),
+    "data-focus-key": `${obj.id}:${key}`,
+    oninput: () => {
+      obj[key] = input.value;
+      input.classList.toggle("is-empty", !input.value);
+      save();
+    },
+    onclick: () => {
+      try {
+        input.showPicker?.();
+      } catch {
+        /* picker unavailable: typing still works */
+      }
+    },
+  });
+  return input;
 }
 
-function dateFields(key, obj) {
+function statusSelect(obj) {
+  const select = el(
+    "select",
+    {
+      "aria-label": t("projectedStatus"),
+      "data-focus-key": `${obj.id}:projStatus`,
+      onchange: () => {
+        obj.projStatus = select.value;
+        save();
+      },
+    },
+    PROJECTED_STATUSES.map((s) => el("option", { value: s, textContent: s || "—" })),
+  );
+  select.value = obj.projStatus ?? "";
+  return select;
+}
+
+function metaGroup(labelKey, controls) {
+  return el("span", { class: "meta-group" }, [el("span", { class: "meta-label", textContent: t(labelKey) }), ...controls]);
+}
+
+function projectedGroup(obj) {
+  if (obj.projDate || obj.projStatus || obj.showProjected) {
+    return metaGroup("projected", [dateInput(obj, "projDate", "projected"), statusSelect(obj)]);
+  }
+  return el("button", {
+    type: "button",
+    class: "btn-text btn-small",
+    onclick: () => {
+      obj.showProjected = true;
+      save();
+      render();
+      document.querySelector(`[data-focus-key="${obj.id}:projDate"]`)?.focus();
+    },
+  }, [icon("plus"), el("span", { textContent: t("projected") })]);
+}
+
+function metaFields(key, obj) {
   if (key === "prs") return [];
   if (key === "completed") {
     return [
-      field(obj, "etaFrom", "etaFrom", { type: "date" }),
-      field(obj, "etaTo", "etaTo", { type: "date" }),
-      field(obj, "projDate", "projected", { type: "date" }),
-      field(obj, "projStatus", "projectedStatus", { options: PROJECTED_STATUSES.map((s) => [s, s || "—"]) }),
+      metaGroup("eta", [
+        dateInput(obj, "etaFrom", "etaFrom"),
+        el("span", { class: "meta-sep" }, [icon("arrow")]),
+        dateInput(obj, "etaTo", "etaTo"),
+      ]),
+      projectedGroup(obj),
     ];
   }
-  return [field(obj, "eta", "eta", { type: "date" })];
+  return [metaGroup("eta", [dateInput(obj, "eta", "eta")])];
 }
 
-function removeButton(list, item) {
-  return el("button", {
-    type: "button",
-    class: "icon-btn",
-    title: t("remove"),
-    "aria-label": t("remove"),
-    textContent: "×",
-    onclick: () => {
-      list.splice(list.indexOf(item), 1);
-      rowErrors.delete(item.id);
-      save();
-      render();
-    },
-  });
-}
-
-function renderSubtasks(key, row) {
-  row.subtasks ??= [];
-  return el("div", { class: "subtasks" }, [
-    ...row.subtasks.map((sub) =>
-      el("div", { class: "subtask", "data-id": sub.id }, [
-        field(sub, "desc", "subtask", { placeholder: t("description"), className: "f-desc" }),
-        ...dateFields(key, sub),
-        removeButton(row.subtasks, sub),
-      ]),
-    ),
-    el("button", {
-      type: "button",
-      class: "link-btn",
-      textContent: t("addSubtask"),
-      onclick: () => {
-        const sub = SUBTASK_FACTORIES[key]();
-        row.subtasks.push(sub);
+function repoSelect(key, row) {
+  if (!row.repo) row.repo = defaultRepo();
+  const repos = [...state.repos];
+  if (row.repo && !repos.includes(row.repo)) repos.push(row.repo);
+  if (repos.length < 2) return null;
+  const select = el(
+    "select",
+    {
+      class: "repo-select",
+      "aria-label": t("repo"),
+      "data-focus-key": `${row.id}:repo`,
+      onchange: () => {
+        row.repo = select.value;
         save();
-        render();
-        focusItem(sub.id);
+        commitRef(key, row);
       },
-    }),
-  ]);
+    },
+    repos.map((r) => el("option", { value: r, textContent: r })),
+  );
+  select.value = row.repo;
+  return select;
 }
 
-function renderRow(key, row) {
-  const isPr = key === "prs";
-  const error = rowErrors.get(row.id);
-  return el("article", { class: error ? "card has-error" : "card", "data-id": row.id }, [
-    el("div", { class: "card-fields" }, [
-      field(row, "ref", isPr ? "pr" : "issue", { placeholder: t("refPlaceholder"), className: "f-ref" }),
-      repoField(row),
-      ...dateFields(key, row),
-      removeButton(state.sections[key], row),
-    ]),
-    isPr ? null : renderSubtasks(key, row),
-    error ? el("p", { class: "row-error", textContent: error() }) : null,
-  ]);
+function removeItem(list, item) {
+  list.splice(list.indexOf(item), 1);
+  rowErrors.delete(item.id);
+  save();
+  render();
 }
 
-function render() {
-  for (const key of SECTIONS) {
-    const list = $(`[data-section="${key}"] .rows`);
-    list.replaceChildren(...state.sections[key].map((row) => renderRow(key, row)));
-  }
-}
-
-function focusItem(id) {
-  document.querySelector(`[data-id="${id}"] input`)?.focus();
+function moveRow(from, row) {
+  const to = NEXT_STAGE[from];
+  const list = state.sections[from];
+  list.splice(list.indexOf(row), 1);
+  const moved = advanceRow(row, to);
+  state.sections[to].push(moved);
+  pressedId = moved.id;
+  save();
+  render();
+  document
+    .querySelector(`[data-id="${moved.id}"]`)
+    ?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+  setTimeout(() => {
+    pressedId = null;
+  }, 800);
 }
 
 function addRow(key) {
@@ -229,7 +312,178 @@ function addRow(key) {
   state.sections[key].push(row);
   save();
   render();
-  focusItem(row.id);
+  const input = document.querySelector(`[data-id="${row.id}"] .tape-input`);
+  input?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+  input?.focus({ preventScroll: true });
+}
+
+function titleState(key, row) {
+  const error = rowErrors.get(row.id);
+  if (error) return { text: error(), cls: "item-title is-error" };
+  if (row.fetching) return { text: t("fetching"), cls: "item-title is-muted" };
+  if (row.title) return { text: row.title, cls: "item-title" };
+  if (!row.ref?.trim()) return { text: t(key === "prs" ? "titleEmptyPr" : "titleEmpty"), cls: "item-title is-muted" };
+  return { text: t(getToken() ? "titlePending" : "titleNoToken"), cls: "item-title is-muted" };
+}
+
+const STATUS_TONE = { Merged: "green", Approved: "green", "Changes Requested": "red", Pending: "yellow", Draft: "grey", Closed: "grey" };
+
+function formatDay(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat(getLanguage(), { weekday: "short", day: "numeric", month: "short" }).format(new Date(y, m - 1, d));
+}
+
+function renderSubtasks(key, row) {
+  return el(
+    "div",
+    { class: "subtasks" },
+    row.subtasks.map((sub) =>
+      el("div", { class: "subtask", "data-id": sub.id }, [
+        field(sub, "desc", "description", { placeholder: t("description"), className: "f-desc", hideLabel: true }),
+        ...metaFields(key, sub),
+        iconButton("x", t("remove"), () => removeItem(row.subtasks, sub)),
+      ]),
+    ),
+  );
+}
+
+function addSubtaskButton(key, row) {
+  return el("button", {
+    type: "button",
+    class: "btn-text btn-small",
+    onclick: () => {
+      const sub = SUBTASK_FACTORIES[key]();
+      row.subtasks.push(sub);
+      save();
+      render();
+      document.querySelector(`[data-id="${sub.id}"] input`)?.focus();
+    },
+  }, [icon("plus"), el("span", { textContent: t("subtask") })]);
+}
+
+function renderRow(key, row) {
+  const isPr = key === "prs";
+  if (!isPr) row.subtasks ??= [];
+  const spent = isSpent(row);
+  const classes = ["item", rowErrors.has(row.id) && "is-error", spent && "is-spent", row.id === pressedId && "is-pressed"]
+    .filter(Boolean)
+    .join(" ");
+
+  const tapeInput = el("input", {
+    class: "tape-input",
+    value: row.ref ?? "",
+    placeholder: isPr ? "PR" : "123",
+    autocomplete: "off",
+    spellcheck: false,
+    "aria-label": t(isPr ? "pr" : "issue"),
+    "data-focus-key": `${row.id}:ref`,
+    oninput: (e) => {
+      row.ref = e.target.value;
+      save();
+    },
+    onchange: () => commitRef(key, row),
+    onkeydown: (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const isLast = state.sections[key].at(-1) === row;
+      e.target.blur();
+      if (isLast && row.ref.trim()) addRow(key);
+    },
+  });
+
+  const title = titleState(key, row);
+  const next = NEXT_STAGE[key];
+  const actions = [];
+  if (next) {
+    actions.push(
+      el("button", { type: "button", class: "btn", onclick: () => moveRow(key, row) }, [
+        el("span", { class: `swatch swatch--${TONE[next]}`, "aria-hidden": "true" }),
+        el("span", { textContent: t("moveTo", { stage: t(next) }) }),
+      ]),
+    );
+  }
+  if (key === "completed") {
+    actions.push(el("button", { type: "button", class: "btn", textContent: t("clear"), onclick: () => removeItem(state.sections[key], row) }));
+  }
+  const removeX = key === "completed" ? null : iconButton("x", t("remove"), () => removeItem(state.sections[key], row));
+  const status = isPr && row.status && !rowErrors.has(row.id)
+    ? el("span", { class: `mark mark--${STATUS_TONE[row.status] ?? "grey"}`, textContent: row.status })
+    : null;
+
+  const meta = [...metaFields(key, row), isPr ? null : addSubtaskButton(key, row)].filter(Boolean);
+
+  return el("article", { class: classes, "data-id": row.id }, [
+    el("div", { class: "item-main" }, [
+      el("label", { class: `tape tape--${TONE[key]} item-tape` }, [tapeInput]),
+      el("div", { class: "item-body" }, [
+        el("p", { class: "item-headline" }, [el("span", { class: title.cls, textContent: title.text }), status]),
+        spent ? el("p", { class: "item-note", textContent: t("reportedOn", { date: formatDay(row.reportedOn) }) }) : null,
+        repoSelect(key, row),
+      ]),
+      actions.length ? el("div", { class: "item-actions" }, actions) : null,
+      removeX ? el("div", { class: "item-x" }, [removeX]) : null,
+      meta.length ? el("div", { class: "item-meta" }, meta) : null,
+    ]),
+    isPr ? null : renderSubtasks(key, row),
+  ]);
+}
+
+function renderLane(key) {
+  const lane = $(`[data-section="${key}"]`);
+  const rows = state.sections[key];
+  const one = key === "prs" ? "countPr" : "countIssue";
+  const many = key === "prs" ? "countPrs" : "countIssues";
+  lane.querySelector(".lane-count").textContent = rows.length ? t(rows.length === 1 ? one : many, { count: rows.length }) : "";
+
+  const tools = lane.querySelector(".lane-tools");
+  tools.replaceChildren();
+  const spentCount = key === "completed" ? rows.filter(isSpent).length : 0;
+  if (spentCount) {
+    tools.append(
+      el("button", {
+        type: "button",
+        class: "btn",
+        textContent: t("clearReported", { count: spentCount }),
+        onclick: () => {
+          state.sections.completed = state.sections.completed.filter((r) => !isSpent(r));
+          save();
+          render();
+        },
+      }),
+    );
+  }
+
+  const list = lane.querySelector(".rows");
+  list.replaceChildren(
+    ...(rows.length
+      ? rows.map((row) => renderRow(key, row))
+      : [el("p", { class: "lane-empty", textContent: t(key === "prs" ? "emptyPrs" : "emptyIssues") })]),
+  );
+}
+
+function render() {
+  const active = document.activeElement;
+  const focusKey = active?.dataset?.focusKey;
+  let selection = null;
+  try {
+    if (focusKey && active.selectionStart != null) selection = [active.selectionStart, active.selectionEnd];
+  } catch {
+    selection = null;
+  }
+
+  SECTIONS.forEach(renderLane);
+
+  if (focusKey) {
+    const target = document.querySelector(`[data-focus-key="${focusKey}"]`);
+    if (target && target !== document.activeElement) {
+      target.focus({ preventScroll: true });
+      try {
+        if (selection) target.setSelectionRange(...selection);
+      } catch {
+        /* not a text control */
+      }
+    }
+  }
 }
 
 function setStatus(sel, text, tone = "") {
@@ -262,6 +516,44 @@ function describeError(err, ref = "") {
   }
 }
 
+async function commitRef(key, row) {
+  const raw = (row.ref ?? "").trim();
+  const ref = parseRef(raw, row.repo);
+  rowErrors.delete(row.id);
+  row.title = "";
+  delete row.status;
+  delete row.reportedOn;
+  if (ref) {
+    row.ref = String(ref.number);
+    row.repo = ref.repo;
+  }
+  save();
+  if (!raw) return render();
+  if (!ref) {
+    rowErrors.set(row.id, () => t("errBadRef"));
+    return render();
+  }
+  const token = getToken();
+  if (!token) return render();
+
+  row.fetching = true;
+  render();
+  try {
+    const client = createClient(token);
+    const item = key === "prs" ? await client.pull(ref) : await client.issue(ref);
+    if (row.ref === String(ref.number) && row.repo === ref.repo) {
+      row.title = item.title;
+      if (key === "prs") row.status = reviewStatus(item);
+    }
+  } catch (err) {
+    rowErrors.set(row.id, () => describeError(err, raw));
+  } finally {
+    delete row.fetching;
+    save();
+    render();
+  }
+}
+
 function detailNodes(key, obj) {
   if (key === "completed") {
     return [
@@ -274,13 +566,15 @@ function detailNodes(key, obj) {
 
 function subtaskNodes(key, row) {
   return (row.subtasks ?? [])
-    .map((sub) => ({ desc: sub.desc.trim(), details: detailNodes(key, sub) }))
+    .map((sub) => ({ desc: (sub.desc ?? "").trim(), details: detailNodes(key, sub) }))
     .filter(({ desc, details }) => desc || details.some((d) => d.value))
     .map(({ desc, details }) => node("Subtask description", desc || "—", details));
 }
 
-async function buildPrItem(ref, client, loadIssue) {
+async function buildPrItem(row, ref, client, loadIssue) {
   const pr = await client.pull(ref);
+  row.title = pr.title;
+  row.status = reviewStatus(pr);
   let issue = pr.closingIssuesReferences?.nodes?.[0];
   if (!issue) {
     const issueRef = findIssueRef(pr, ref.repo);
@@ -295,16 +589,18 @@ async function buildPrItem(ref, client, loadIssue) {
 async function buildItem(key, row, client, loadIssue) {
   const ref = parseRef(row.ref, row.repo);
   if (!ref) throw new Error(t("errBadRef"));
-  if (key === "prs") return buildPrItem(ref, client, loadIssue);
+  if (key === "prs") return buildPrItem(row, ref, client, loadIssue);
   const issue = await loadIssue(ref);
+  row.title = issue.title;
   return issueNode(issue, [...detailNodes(key, row), ...subtaskNodes(key, row)]);
 }
 
 function setBusy(busy) {
   const button = $("#generate");
   button.disabled = busy;
+  button.classList.toggle("is-busy", busy);
   button.textContent = t(busy ? "generating" : "generate");
-  $("main").setAttribute("aria-busy", String(busy));
+  $(".work").setAttribute("aria-busy", String(busy));
 }
 
 async function generate() {
@@ -313,7 +609,8 @@ async function generate() {
   const token = getToken();
   if (!token) {
     setBanner(() => t("errNoToken"));
-    $("#settings").open = true;
+    setSettingsOpen(true);
+    $("#token").focus();
     render();
     return;
   }
@@ -338,10 +635,12 @@ async function generate() {
 
   const blocks = SECTIONS.map((key) => ({ title: SECTION_TITLES[key], items: [] }));
   let unauthorized = false;
+  const today = todayIso();
   results.forEach((res, i) => {
     const { key, row } = jobs[i];
     if (res.status === "fulfilled") {
       blocks[SECTIONS.indexOf(key)].items.push(res.value);
+      if (key === "completed") row.reportedOn ??= today;
     } else {
       unauthorized ||= res.reason?.status === 401;
       rowErrors.set(row.id, () => describeError(res.reason, row.ref.trim()));
@@ -411,6 +710,7 @@ function saveToken() {
   storeToken(value);
   input.value = "";
   checkToken();
+  render();
 }
 
 function changeRemember() {
@@ -422,6 +722,7 @@ function forgetToken() {
   write(local, TOKEN_KEY, null);
   write(session, TOKEN_KEY, null);
   checkToken();
+  render();
 }
 
 function updateRepos() {
@@ -439,29 +740,40 @@ function commitRepos() {
   );
 }
 
+function setSettingsOpen(open) {
+  $("#settings").hidden = !open;
+  $("#settingsToggle").setAttribute("aria-expanded", String(open));
+}
+
+function paintToday() {
+  $("#today").textContent = new Intl.DateTimeFormat(getLanguage(), { weekday: "long", day: "numeric", month: "long" }).format(new Date());
+}
+
 function changeLanguage(lang) {
   write(local, LANG_KEY, setLanguage(lang));
   applyTranslations();
+  paintToday();
   render();
   statuses.forEach((_, sel) => paintStatus(sel));
   setBanner(bannerText);
+  if (!$("#generate").disabled) setBusy(false);
 }
 
 function init() {
   const lang = setLanguage(read(local, LANG_KEY) || (navigator.language?.startsWith("es") ? "es" : "en"));
   $("#language").value = lang;
 
-  for (const key of SECTIONS) {
-    if (!state.sections[key].length) state.sections[key].push(ROW_FACTORIES[key]());
-  }
   $("#repos").value = state.repos.join("\n");
   $("#remember").checked = !read(session, TOKEN_KEY);
   $("#output").value = state.output;
-  $("#settings").open = !getToken() || !state.repos.length;
+  setSettingsOpen(!getToken() || !state.repos.length);
 
+  $("#settingsToggle").addEventListener("click", () => setSettingsOpen($("#settings").hidden));
   $("#language").addEventListener("change", (e) => changeLanguage(e.target.value));
   $("#token").addEventListener("change", saveToken);
-  $("#token").addEventListener("keydown", (e) => { if (e.key === "Enter") saveToken(); });
+  $("#token").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") saveToken();
+  });
   $("#remember").addEventListener("change", changeRemember);
   $("#forgetToken").addEventListener("click", forgetToken);
   $("#repos").addEventListener("input", updateRepos);
@@ -474,10 +786,13 @@ function init() {
     save();
   });
   document.querySelectorAll("[data-section]").forEach((section) => {
-    section.querySelector("[data-add]").addEventListener("click", () => addRow(section.dataset.section));
+    const button = section.querySelector("[data-add]");
+    button.prepend(icon("plus"));
+    button.addEventListener("click", () => addRow(section.dataset.section));
   });
 
   applyTranslations();
+  paintToday();
   render();
   checkToken();
 }

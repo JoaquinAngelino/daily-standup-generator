@@ -9,6 +9,21 @@ export const SECTION_TITLES = {
 
 export const PROJECTED_STATUSES = ["", "Pending merge", "Pending code review", "Merged"];
 
+export const NEXT_STAGE = { upcoming: "inProgress", inProgress: "completed" };
+
+// Carries an item into the next stage, mapping its single ETA onto that stage's fields.
+export function advanceRow(row, to) {
+  const subtasks = (row.subtasks ?? []).map((s) =>
+    to === "completed"
+      ? { id: s.id, desc: s.desc ?? "", etaFrom: "", etaTo: s.eta ?? "", projDate: "", projStatus: "" }
+      : { id: s.id, desc: s.desc ?? "", eta: s.eta ?? "" },
+  );
+  const base = { id: row.id, ref: row.ref ?? "", repo: row.repo ?? "", title: row.title ?? "", subtasks };
+  return to === "completed"
+    ? { ...base, etaFrom: "", etaTo: row.eta ?? "", projDate: "", projStatus: "" }
+    : { ...base, eta: row.eta ?? "" };
+}
+
 const NAME = "[\\w.-]+";
 const REPO_RE = new RegExp(`^${NAME}/${NAME}$`);
 const URL_RE = new RegExp(`github\\.com/(${NAME}/${NAME})/(?:issues|pull)/(\\d+)`);
