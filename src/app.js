@@ -28,6 +28,7 @@ const ICONS = {
   x: "M4 4l8 8M12 4l-8 8",
   plus: "M8 3v10M3 8h10",
   arrow: "M3 8h10M9 4l4 4-4 4",
+  check: "M3 8.5l3.5 3.5L13 4.5",
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -624,6 +625,19 @@ async function generate() {
 }
 
 // GitHub gets plain Markdown only: with HTML on the clipboard its editor may convert the paste.
+function flashCopied(sel) {
+  const button = $(sel);
+  if (button.classList.contains("is-copied")) return;
+  button.style.width = `${button.offsetWidth}px`;
+  button.classList.add("is-copied");
+  button.replaceChildren(icon("check"));
+  setTimeout(() => {
+    button.classList.remove("is-copied");
+    button.style.width = "";
+    button.textContent = t(button.dataset.i18n);
+  }, 300);
+}
+
 async function copyOutput(target) {
   const markdown = $("#output").value.trim();
   if (!markdown) return;
@@ -639,6 +653,7 @@ async function copyOutput(target) {
       await navigator.clipboard.writeText(target === "slack" ? markdownToSlackText(markdown) : markdown);
     }
     setStatus("#copyStatus", () => t(target === "slack" ? "copiedSlack" : "copiedGithub"), "ok");
+    flashCopied(target === "slack" ? "#copySlack" : "#copyGithub");
   } catch {
     setStatus("#copyStatus", () => t("copyFailed"), "error");
   }

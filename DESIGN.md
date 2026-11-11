@@ -343,7 +343,8 @@ A PR review state shows as a neutral chip beside the title: 22px high, 11px radi
 - **Hover:** the stroke darkens to muted.
 - **Focus:** a global 2px ink outline, offset by 2px. The output textarea uses a -2px offset.
 - **Select:** a custom stroked chevron, sized to its content in rows.
-- **Repo select:** a ghost control (transparent stroke and fill, muted 13px) that shows its stroke only on hover.
+- **Repo select:** a 24px pill (muted at 12%, 12px radius, muted 12.5px/500 text, chevron) whose size never changes; hover deepens the fill to 22% and the text to ink.
+- **Select picker:** where `appearance: base-select` is supported, every select opens a styled list below it: field background, 1px rule stroke, 8px radius, soft shadow, 6px-radius options with a muted hover wash and a green-text checkmark. Other browsers keep the native list.
 - **Date:** 108px wide. An empty date is muted. The picker indicator stays hidden until hover or focus.
 
 ### Navigation

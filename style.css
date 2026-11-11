@@ -417,20 +417,56 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 .item-meta select,
 .subtask select,
-.repo-select { field-sizing: content; }
-
 .repo-select {
   justify-self: start;
   width: auto;
-  height: 26px;
-  font-size: 13px;
-  border-color: transparent;
-  background-color: transparent;
+  height: 24px;
+  padding: 0 24px 0 10px;
+  border: 0;
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--muted) 12%, transparent);
+  background-position: right 7px center;
+  background-size: 12px;
   color: var(--muted);
-  padding-left: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
 }
 
-.repo-select:hover { border-color: var(--rule); padding-left: 6px; }
+.repo-select:hover { background-color: color-mix(in srgb, var(--muted) 22%, transparent); color: var(--ink); }
+
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) { appearance: base-select; }
+
+  select { display: inline-flex; align-items: center; }
+  select::picker-icon { display: none; }
+
+  ::picker(select) {
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block;
+    position-try-order: normal;
+    margin: 4px 0;
+    padding: 4px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--field);
+    color: var(--ink);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+  }
+
+  option {
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+  }
+
+  option:hover,
+  option:focus-visible { background: color-mix(in srgb, var(--muted) 14%, transparent); outline: none; }
+  option:checked { font-weight: 600; }
+  option::checkmark { color: var(--green-text); }
+}
 
 .setting input,
 .setting textarea { width: 100%; }
@@ -522,6 +558,18 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 .status:empty { display: none; }
 .status[data-tone="ok"] { color: var(--green-text); }
 .status[data-tone="error"] { color: var(--red-text); }
+
+#copyStatus[data-tone="ok"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.btn.is-copied { justify-content: center; color: var(--green-text); }
+.btn.is-copied:hover { background: var(--field); }
 
 /* Output */
 
@@ -630,5 +678,5 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 @media (prefers-reduced-motion: reduce) {
   .is-pressed .item-tape, .generate.is-busy::after { animation: none; }
-  .btn, .btn-text, .generate, .tape { transition: none; }
+  .btn, .btn-text, .generate, .tape, .repo-select { transition: none; }
 }
