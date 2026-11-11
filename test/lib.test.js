@@ -123,6 +123,6 @@ test("markdownToHtml keeps one break between sections", () => {
 test("markdownToSlackText converts to Slack syntax", () => {
   assert.equal(
     markdownToSlackText("### Completed\n- **GitHub Issue:** [7](https://x.io/7) — a\n    - **ETA:** 1"),
-    "*Completed*\n• *GitHub Issue:* 7 (https://x.io/7) — a\n    • *ETA:* 1",
+    "*Completed*\n• *GitHub Issue:* [7](https://x.io/7) — a\n    • *ETA:* 1",
   );
 });

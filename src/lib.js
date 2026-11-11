@@ -163,14 +163,13 @@ export function markdownToHtml(md) {
   return out.join("");
 }
 
-// Plain-text fallback in Slack's syntax, used when the browser cannot put HTML on the clipboard.
+// Slack pastes this plain text over the HTML; it converts Markdown links itself, so they stay as is.
 export function markdownToSlackText(md) {
   return String(md)
     .split("\n")
     .map((line) => {
       const heading = /^#{1,6}\s+(.*)$/.exec(line);
       return (heading ? `**${heading[1]}**` : line)
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1 ($2)")
         .replace(/\*\*(.+?)\*\*/g, "*$1*")
         .replace(/^(\s*)[-*]\s+/, "$1• ");
     })
