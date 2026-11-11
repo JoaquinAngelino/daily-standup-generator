@@ -12,7 +12,7 @@ Primarily one developer (the repo owner) on the rhuang projects (`juristium-clon
 
 ## Product Purpose
 
-Turns a short list of GitHub issue and PR numbers into the team's standup update, with titles, links, ETAs, projected delivery and PR review status filled in from GitHub. Success: the morning standup is ready to paste in a minute or two, and every link, title and status in it is correct.
+Turns a short list of GitHub issue and PR numbers into the team's standup update, with titles, links, ETAs and PR review status filled in from GitHub. Success: the morning standup is ready to paste in a minute or two, and every link, title and status in it is correct.
 
 ## Positioning
 
@@ -27,9 +27,9 @@ The user types numbers and dates; GitHub supplies everything else (titles, links
 
 ## Capabilities and Constraints
 
-- Sections: Completed (ETA range, projected delivery date plus status, subtasks), In Progress and Upcoming (ETA, subtasks), PR Review (PR plus repo).
+- Sections: Completed (ETA range, subtasks), In Progress and Upcoming (ETA, subtasks), PR Review (PR plus repo).
 - References accepted as `123`, `owner/repo#123`, or a GitHub issue/PR URL; repos are configured in the app, the first being the default.
-- The output format is a team convention and must not change: `### Section` headings; `- **GitHub Issue:** [n](url) — title`; nested `**ETA:**`, `**Projected Overall Feature Delivery (Alpha):**`, `**Subtask description:**`; PR items with `**GitHub Issue:**` and `**Status:**`.
+- The output format is a team convention and must not change: `### Section` headings; `- **GitHub Issue:** [n](url) — title`; nested `**ETA:**`, `**Subtask description:**`; PR items with `**GitHub Issue:**` and `**Status:**`.
 - Static site on GitHub Pages: plain HTML, CSS and JavaScript modules, no build step, no backend. All state (rows, settings, token) lives in the browser and survives restarts.
 - Read-only GitHub access through a user-supplied token (REST for issues, GraphQL for PRs).
 - UI languages: English and Spanish. Generated standup text is always English.

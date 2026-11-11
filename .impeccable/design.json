@@ -164,22 +164,6 @@
           "#fee9e5"
         ]
       },
-      "tape-grey": {
-        "role": "secondary",
-        "displayName": "Spent Grey Tape",
-        "canonical": "oklch(50.8% 0.018 257.2)",
-        "dark": "#59606a",
-        "tonalRamp": [
-          "#070b13",
-          "#20252e",
-          "#3c424c",
-          "#5b626c",
-          "#7c838d",
-          "#9ea6b1",
-          "#c2cad5",
-          "#e7effb"
-        ]
-      },
       "tape-black": {
         "role": "primary",
         "displayName": "Bench Black Tape",
@@ -248,7 +232,7 @@
       "green-text": {
         "role": "tertiary",
         "displayName": "Ink Green",
-        "canonical": "oklch(48.2% 0.113 153.7)",
+        "canonical": "oklch(44.8% 0.105 153.5)",
         "dark": "#6fd39b",
         "tonalRamp": [
           "#001004",
@@ -259,6 +243,139 @@
           "#68ba84",
           "#8ddfa7",
           "#c9fed8"
+        ]
+      },
+      "yellow-text": {
+        "role": "tertiary",
+        "displayName": "Ink Amber",
+        "canonical": "oklch(49.0% 0.100 85.4)",
+        "dark": "#f0cd5a",
+        "tonalRamp": [
+          "#110a00",
+          "#2c1f01",
+          "#4e3a02",
+          "#735600",
+          "#957529",
+          "#b8974d",
+          "#debc73",
+          "#ffedc7"
+        ]
+      },
+      "blue-text": {
+        "role": "tertiary",
+        "displayName": "Ink Blue",
+        "canonical": "oklch(44.1% 0.142 259.0)",
+        "dark": "#93b8f3",
+        "tonalRamp": [
+          "#000923",
+          "#001e4f",
+          "#003784",
+          "#2358a8",
+          "#4379cd",
+          "#639bf2",
+          "#9cc3ff",
+          "#e5efff"
+        ]
+      },
+      "tint-green": {
+        "role": "secondary",
+        "displayName": "Completed Tint",
+        "canonical": "color-mix(in srgb, var(--green) var(--tint), transparent)",
+        "dark": "#1f925333",
+        "derivedFrom": "tape-green",
+        "tint": {
+          "light": "14%",
+          "dark": "20%"
+        },
+        "tonalRamp": [
+          "#001004",
+          "#042d16",
+          "#035029",
+          "#0c743f",
+          "#31995c",
+          "#5abd7d",
+          "#7fe2a1",
+          "#c6ffd6"
+        ]
+      },
+      "tint-yellow": {
+        "role": "secondary",
+        "displayName": "In Progress Tint",
+        "canonical": "color-mix(in srgb, var(--yellow) var(--tint), transparent)",
+        "dark": "#f2c01433",
+        "derivedFrom": "tape-yellow",
+        "tint": {
+          "light": "14%",
+          "dark": "20%"
+        },
+        "tonalRamp": [
+          "#100a00",
+          "#2f2302",
+          "#514008",
+          "#765e14",
+          "#9f7e12",
+          "#c89f1c",
+          "#f4c21a",
+          "#ffedc0"
+        ]
+      },
+      "tint-blue": {
+        "role": "secondary",
+        "displayName": "Upcoming Tint",
+        "canonical": "color-mix(in srgb, var(--blue) var(--tint), transparent)",
+        "dark": "#2b6bd333",
+        "derivedFrom": "tape-blue",
+        "tint": {
+          "light": "14%",
+          "dark": "20%"
+        },
+        "tonalRamp": [
+          "#000925",
+          "#012156",
+          "#053c8d",
+          "#1b5bc0",
+          "#3f7fe7",
+          "#6da5ff",
+          "#aacbfe",
+          "#e6effe"
+        ]
+      },
+      "tint-red": {
+        "role": "secondary",
+        "displayName": "PR Review Tint",
+        "canonical": "color-mix(in srgb, var(--red) var(--tint), transparent)",
+        "dark": "#d8402f33",
+        "derivedFrom": "tape-red",
+        "tint": {
+          "light": "14%",
+          "dark": "20%"
+        },
+        "tonalRamp": [
+          "#1e0000",
+          "#4d0100",
+          "#7f0804",
+          "#b5150b",
+          "#de4536",
+          "#fa7866",
+          "#ffb3a7",
+          "#fee9e5"
+        ]
+      },
+      "tint-muted": {
+        "role": "neutral",
+        "displayName": "Mark Tint",
+        "canonical": "color-mix(in srgb, var(--muted) 12%, transparent)",
+        "dark": "#a3aab41f",
+        "derivedFrom": "muted",
+        "tonalRamp": [
+          "#070b13",
+          "#1f252e",
+          "#3c434c",
+          "#5b626c",
+          "#7b838e",
+          "#9ea6b1",
+          "#c2cad5",
+          "#e7effb"
         ]
       }
     },
@@ -273,7 +390,7 @@
       },
       "stage": {
         "displayName": "Stage",
-        "purpose": "Lane-opening stage tapes; uppercase."
+        "purpose": "Lane-opening stage tapes (17px on the lane head); uppercase."
       },
       "count": {
         "displayName": "Count",
@@ -281,7 +398,7 @@
       },
       "mark": {
         "displayName": "Mark",
-        "purpose": "PR review-state marks; uppercase."
+        "purpose": "Neutral PR review-state chips; sentence case."
       },
       "title": {
         "displayName": "Title",
@@ -355,6 +472,11 @@
         "purpose": "Generate busy indicator."
       },
       {
+        "name": "tape-tint",
+        "value": "240ms background-color, color",
+        "purpose": "Tape tint and text colour change when a tape changes stage or state."
+      },
+      {
         "name": "hover",
         "value": "120ms background-color, color, text-decoration-color",
         "purpose": "Button hover; disabled under prefers-reduced-motion with all animations."
@@ -376,41 +498,41 @@
       "name": "Stage Tape",
       "kind": "custom",
       "refersTo": "tape-stage-completed",
-      "description": "Lane-opening stage head on flat vinyl; colour is the stage.",
+      "description": "Lane-opening stage head: soft tint of the stage hue, text in the stage's text-safe tone, 8px corners.",
       "html": "<div style=\"display:flex;gap:12px;flex-wrap:wrap\"><h2 class=\"ds-tape ds-tape--green\">Completed</h2><h2 class=\"ds-tape ds-tape--yellow\">In Progress</h2><h2 class=\"ds-tape ds-tape--blue\">Upcoming</h2><h2 class=\"ds-tape ds-tape--red\">PR Review</h2></div>",
-      "css": ".ds-tape { --tape: var(--black, #15171a); margin:0; display:inline-flex; align-items:center; justify-content:center; min-height:32px; padding:0 12px; border:0; border-radius:0; color:#fff; background:var(--tape); font:700 19px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.06em; text-transform:uppercase; } .ds-tape--green { --tape: var(--green, #1d8a4e); } .ds-tape--yellow { --tape: var(--yellow, #f2c014); color: var(--on-yellow, #1b1500); } .ds-tape--blue { --tape: var(--blue, #1f5fc4); } .ds-tape--red { --tape: var(--red, #d2392b); }"
+      "css": ".ds-tape { --tape: var(--muted, #565d67); --tape-text: var(--ink, #15171a); margin:0; display:inline-flex; align-items:center; justify-content:center; min-height:30px; padding:0 12px; border:0; border-radius:var(--radius, 8px); color:var(--tape-text); background:color-mix(in srgb, var(--tape) var(--tint, 14%), transparent); font:700 17px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.06em; text-transform:uppercase; transition: background-color 240ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-tape--green { --tape: var(--green, #1d8a4e); --tape-text: var(--green-text, #146538); } .ds-tape--yellow { --tape: var(--yellow, #f2c014); --tape-text: var(--yellow-text, #7a5b00); } .ds-tape--blue { --tape: var(--blue, #1f5fc4); --tape-text: var(--blue-text, #1a4f9f); } .ds-tape--red { --tape: var(--red, #d2392b); --tape-text: var(--red-text, #ad281c); }"
     },
     {
       "name": "Number Tape",
       "kind": "input",
       "refersTo": "number-tape",
-      "description": "Editable issue number printed on its stage tape; error and spent states live on the tape.",
-      "html": "<div style=\"display:flex;gap:12px;flex-wrap:wrap\"><label class=\"ds-num ds-num--yellow\"><input class=\"ds-num-input\" value=\"22853\" aria-label=\"Issue\"></label><label class=\"ds-num ds-num--red ds-num--error\"><input class=\"ds-num-input\" value=\"9999\" aria-label=\"Issue\"></label><label class=\"ds-num ds-num--spent\"><input class=\"ds-num-input\" value=\"22793\" aria-label=\"Issue\"></label></div>",
-      "css": ".ds-num { --tape: var(--green, #1d8a4e); display:inline-flex; align-items:center; justify-content:center; width:132px; height:40px; padding:0 8px; color:#fff; background:var(--tape); font:700 20px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.06em; text-transform:uppercase; cursor:text; } .ds-num:focus-within { outline:2px solid var(--ink, #15171a); outline-offset:2px; } .ds-num--yellow { --tape: var(--yellow, #f2c014); color: var(--on-yellow, #1b1500); } .ds-num--red { --tape: var(--red, #d2392b); } .ds-num-input { width:100%; height:100%; padding:0; border:0; background:transparent; color:inherit; font:inherit; font-size:24px; letter-spacing:0.05em; text-align:center; caret-color:currentColor; outline:none; } .ds-num--error .ds-num-input { text-decoration: line-through 2px; } .ds-num--spent { background:transparent; box-shadow: inset 0 0 0 1px currentColor; color: var(--green-text, #17703f); }"
+      "description": "Editable issue number printed on its stage tint; error (red tint, struck numerals) and spent (outline) states live on the tape.",
+      "html": "<div style=\"display:flex;gap:12px;flex-wrap:wrap\"><label class=\"ds-num ds-tape--yellow\"><input class=\"ds-num-input\" value=\"22853\" aria-label=\"Issue\"></label><label class=\"ds-num ds-tape--red ds-num--error\"><input class=\"ds-num-input\" value=\"9999\" aria-label=\"Issue\"></label><label class=\"ds-num ds-tape--green ds-num--spent\"><input class=\"ds-num-input\" value=\"22793\" aria-label=\"Issue\"></label></div>",
+      "css": ".ds-num { --tape: var(--green, #1d8a4e); --tape-text: var(--green-text, #146538); display:inline-flex; align-items:center; justify-content:center; width:132px; height:40px; padding:0 8px; border-radius:var(--radius, 8px); color:var(--tape-text); background:color-mix(in srgb, var(--tape) var(--tint, 14%), transparent); font:700 20px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.06em; text-transform:uppercase; cursor:text; transition: background-color 240ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-num:focus-within { outline:2px solid var(--ink, #15171a); outline-offset:2px; } .ds-tape--green { --tape: var(--green, #1d8a4e); --tape-text: var(--green-text, #146538); } .ds-tape--yellow { --tape: var(--yellow, #f2c014); --tape-text: var(--yellow-text, #7a5b00); } .ds-tape--blue { --tape: var(--blue, #1f5fc4); --tape-text: var(--blue-text, #1a4f9f); } .ds-tape--red { --tape: var(--red, #d2392b); --tape-text: var(--red-text, #ad281c); } .ds-num-input { width:100%; height:100%; padding:0; border:0; background:transparent; color:inherit; font:inherit; font-size:24px; letter-spacing:0.05em; text-align:center; caret-color:currentColor; outline:none; } .ds-num--error .ds-num-input { text-decoration: line-through 2px; } .ds-num--spent { background:transparent; box-shadow: inset 0 0 0 1px currentColor; color: var(--green-text, #146538); }"
     },
     {
       "name": "Generate Tape",
       "kind": "button",
       "refersTo": "generate-tape",
-      "description": "The single primary action: full-width near-black tape at the output panel's foot.",
+      "description": "The single primary action and only solid tape: full-width near-black, white text, 8px corners, at the output panel's foot.",
       "html": "<button type=\"button\" class=\"ds-generate\">Generate standup</button>",
-      "css": ".ds-generate { display:flex; align-items:center; justify-content:center; width:100%; height:56px; padding:0 12px; border:0; border-radius:0; color:#fff; background:var(--black, #15171a); box-shadow: inset 0 0 0 1px var(--black-edge, transparent); font:700 26px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-generate:active { transform: scale(0.985); } .ds-generate:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; }"
+      "css": ".ds-generate { display:flex; align-items:center; justify-content:center; width:100%; height:56px; padding:0 12px; border:0; border-radius:var(--radius, 8px); color:#fff; background:var(--black, #15171a); box-shadow: inset 0 0 0 1px var(--black-edge, transparent); font:700 26px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-generate:active { transform: scale(0.985); } .ds-generate:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; }"
     },
     {
       "name": "Outline Button",
       "kind": "button",
       "refersTo": "button",
-      "description": "Default action: square, 1px ink stroke, inverts fully on hover.",
+      "description": "Default action: 6px corners, 1px ink stroke, inverts fully on hover.",
       "html": "<button type=\"button\" class=\"ds-btn\">Copy for Slack</button>",
-      "css": ".ds-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border:1px solid var(--ink, #15171a); border-radius:0; background:var(--field, #fff); color:var(--ink, #15171a); font:600 14px/1 var(--font-body, 'Barlow', system-ui, sans-serif); white-space:nowrap; cursor:pointer; transition: background-color 120ms, color 120ms; } .ds-btn:hover { background:var(--ink, #15171a); color:var(--ground, #e8eaed); } .ds-btn:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; }"
+      "css": ".ds-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border:1px solid var(--ink, #15171a); border-radius:var(--radius-sm, 6px); background:var(--field, #fff); color:var(--ink, #15171a); font:600 14px/1 var(--font-body, 'Barlow', system-ui, sans-serif); white-space:nowrap; cursor:pointer; transition: background-color 120ms, color 120ms; } .ds-btn:hover { background:var(--ink, #15171a); color:var(--ground, #e8eaed); } .ds-btn:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; }"
     },
     {
       "name": "Move Button",
       "kind": "button",
       "refersTo": "button",
-      "description": "Outline button naming the next stage, led by that stage's tape swatch.",
+      "description": "Outline button naming the next stage, led by an 8px circular swatch in that stage's hue.",
       "html": "<button type=\"button\" class=\"ds-btn-move\"><span class=\"ds-swatch\" aria-hidden=\"true\"></span><span>Move to Completed</span></button>",
-      "css": ".ds-btn-move { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border:1px solid var(--ink, #15171a); border-radius:0; background:var(--field, #fff); color:var(--ink, #15171a); font:600 14px/1 var(--font-body, 'Barlow', system-ui, sans-serif); white-space:nowrap; cursor:pointer; transition: background-color 120ms, color 120ms; } .ds-btn-move:hover { background:var(--ink, #15171a); color:var(--ground, #e8eaed); } .ds-btn-move:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; } .ds-swatch { width:22px; height:12px; background:var(--green, #1d8a4e); }"
+      "css": ".ds-btn-move { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 12px; border:1px solid var(--ink, #15171a); border-radius:var(--radius-sm, 6px); background:var(--field, #fff); color:var(--ink, #15171a); font:600 14px/1 var(--font-body, 'Barlow', system-ui, sans-serif); white-space:nowrap; cursor:pointer; transition: background-color 120ms, color 120ms; } .ds-btn-move:hover { background:var(--ink, #15171a); color:var(--ground, #e8eaed); } .ds-btn-move:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; } .ds-swatch { width:8px; height:8px; border-radius:50%; background:var(--green, #1d8a4e); }"
     },
     {
       "name": "Text Button",
@@ -424,17 +546,17 @@
       "name": "Review Mark",
       "kind": "chip",
       "refersTo": "mark",
-      "description": "PR review state as a small tape beside the title; colour follows the stage mapping.",
-      "html": "<div style=\"display:flex;gap:8px\"><span class=\"ds-mark ds-mark--green\">Merged</span><span class=\"ds-mark ds-mark--yellow\">Pending</span><span class=\"ds-mark ds-mark--red\">Changes Requested</span><span class=\"ds-mark ds-mark--grey\">Draft</span></div>",
-      "css": ".ds-mark { display:inline-flex; align-items:center; height:22px; padding:0 7px; color:#fff; background:var(--tape); font:700 14px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap; } .ds-mark--green { --tape: var(--mark-green, #17703f); } .ds-mark--red { --tape: var(--mark-red, #b52e22); } .ds-mark--yellow { --tape: var(--yellow, #f2c014); color: var(--on-yellow, #1b1500); } .ds-mark--grey { --tape: var(--grey-tape, #5f6670); }"
+      "description": "PR review state as a neutral muted chip beside the title; no stage colour, only words differ.",
+      "html": "<div style=\"display:flex;gap:8px\"><span class=\"ds-mark\">Merged</span><span class=\"ds-mark\">Pending</span><span class=\"ds-mark\">Changes requested</span><span class=\"ds-mark\">Draft</span></div>",
+      "css": ".ds-mark { display:inline-flex; align-items:center; height:22px; padding:0 9px; border-radius:11px; color:var(--muted, #565d67); background:color-mix(in srgb, var(--muted, #565d67) 12%, transparent); font:500 13px/1 var(--font-body, 'Barlow', system-ui, sans-serif); white-space:nowrap; }"
     },
     {
       "name": "Input",
       "kind": "input",
       "refersTo": "input",
-      "description": "Square field on a 1px hairline stroke; hover darkens the stroke, focus is a 2px ink ring.",
+      "description": "Field on a 1px hairline stroke with 6px corners; hover darkens the stroke, focus is a 2px ink ring.",
       "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Repositories</span><input class=\"ds-input\" placeholder=\"owner/repo\"></label>",
-      "css": ".ds-field { display:grid; gap:5px; } .ds-field-label { color:var(--muted, #565d67); font:600 11px/1 var(--font-body, 'Barlow', system-ui, sans-serif); letter-spacing:0.08em; text-transform:uppercase; } .ds-input { height:36px; padding:0 9px; border:1px solid var(--rule, #c7ccd3); border-radius:0; background:var(--field, #fff); color:var(--ink, #15171a); font:400 14px/1.3 var(--font-body, 'Barlow', system-ui, sans-serif); font-variant-numeric: tabular-nums; } .ds-input::placeholder { color:var(--muted, #565d67); } .ds-input:hover { border-color:var(--muted, #565d67); } .ds-input:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; }"
+      "css": ".ds-field { display:grid; gap:5px; } .ds-field-label { color:var(--muted, #565d67); font:600 11px/1 var(--font-body, 'Barlow', system-ui, sans-serif); letter-spacing:0.08em; text-transform:uppercase; } .ds-input { height:36px; padding:0 9px; border:1px solid var(--rule, #c7ccd3); border-radius:var(--radius-sm, 6px); background:var(--field, #fff); color:var(--ink, #15171a); font:400 14px/1.3 var(--font-body, 'Barlow', system-ui, sans-serif); font-variant-numeric: tabular-nums; } .ds-input::placeholder { color:var(--muted, #565d67); } .ds-input:hover { border-color:var(--muted, #565d67); } .ds-input:focus-visible { outline:2px solid var(--ink, #15171a); outline-offset:2px; }"
     },
     {
       "name": "Lane Row",
@@ -442,33 +564,33 @@
       "refersTo": "number-tape",
       "description": "One hairline-separated row: number tape, title, repo, and inline meta. Never a card.",
       "html": "<div class=\"ds-rows\"><article class=\"ds-row\"><span class=\"ds-row-tape\">22845</span><div><p class=\"ds-row-title\">Court finder address is not prefilled</p><p class=\"ds-row-meta\">rhuang/juristium-clone</p></div></article></div>",
-      "css": ".ds-rows { border-top:1px solid var(--rule, #c7ccd3); } .ds-row { display:grid; grid-template-columns:132px minmax(0,1fr); gap:8px 16px; padding:14px 0; border-bottom:1px solid var(--rule, #c7ccd3); align-items:start; } .ds-row-tape { display:flex; align-items:center; justify-content:center; height:40px; color:#fff; background:var(--green, #1d8a4e); font:700 24px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.05em; } .ds-row-title { margin:0; color:var(--ink, #15171a); font:500 16px/1.35 var(--font-body, 'Barlow', system-ui, sans-serif); } .ds-row-meta { margin:2px 0 0; color:var(--muted, #565d67); font:400 13px/1.45 var(--font-body, 'Barlow', system-ui, sans-serif); }"
+      "css": ".ds-rows { border-top:1px solid var(--rule, #c7ccd3); } .ds-row { display:grid; grid-template-columns:132px minmax(0,1fr); gap:8px 16px; padding:14px 0; border-bottom:1px solid var(--rule, #c7ccd3); align-items:start; } .ds-row-tape { display:flex; align-items:center; justify-content:center; height:40px; border-radius:var(--radius, 8px); color:var(--green-text, #146538); background:color-mix(in srgb, var(--green, #1d8a4e) var(--tint, 14%), transparent); font:700 24px/1 var(--font-tape, 'Barlow Condensed', 'Barlow', system-ui, sans-serif); letter-spacing:0.05em; } .ds-row-title { margin:0; color:var(--ink, #15171a); font:500 16px/1.35 var(--font-body, 'Barlow', system-ui, sans-serif); } .ds-row-meta { margin:2px 0 0; color:var(--muted, #565d67); font:400 13px/1.45 var(--font-body, 'Barlow', system-ui, sans-serif); }"
     }
   ],
   "narrative": {
     "northStar": "Label Tape",
-    "overview": "**Creative North Star: \"Label Tape\"**\n\nEvery item wears a printed label whose tape colour is its stage. The surface is a cool grey work bench; on it sit strips of label-maker vinyl rendered flat at full saturation, with no gloss, emboss or bevel imitation. Moving an item on reprints its number tape in the next stage's colour with one short feed-and-press. The issue number is the headline of each row; the fetched title sits beside it in plain Barlow.\n\nThe system is quiet everywhere except the tape. Neutrals are cool greys, edges are 1px hairlines, and corners are square throughout. Rows in a lane are separated by one hairline each; there are no cards and no nesting. Colour belongs to the stage family. Any other colour in the build is a text-safe or semantic version of a stage hue.\n\nLight and dark are both first-class and follow `prefers-color-scheme`. In dark, the ground drops to near-black graphite and the tape hues keep their saturation. The black action tape gains a 1px rule edge so it still reads against the dark panel.",
+    "overview": "**Creative North Star: \"Label Tape\"**\n\nEach lane opens with a printed label whose tape colour is its stage; the items inside carry neutral number tapes, since the lane already names their state. The surface is a cool grey work bench; on it sit strips of label-maker tape rendered as soft, flat tints of the stage hue with the type printed in that hue's deep, text-safe tone, with no gloss, emboss or bevel imitation. Moving an item on reprints its number tape in the next lane with one short feed-and-press. The issue number is the headline of each row; the fetched title sits beside it in plain Barlow.\n\nThe system is quiet everywhere except the tape. Neutrals are cool greys, edges are 1px hairlines, tapes have gently rounded corners and controls slightly tighter ones. Rows in a lane are separated by one hairline each; there are no cards and no nesting. Colour belongs to the stage family and identifies the section. Any other colour in the build is a text-safe or semantic version of a stage hue.\n\nLight and dark are both first-class and follow `prefers-color-scheme`. In dark, the ground drops to near-black graphite, the tints rise from 14% to 20% of the hue, and the text-safe tones turn light. The solid black action tape gains a 1px rule edge so it still reads against the dark panel.",
     "keyCharacteristics": [
-      "Flat, full-saturation stage tapes: green Completed, yellow In Progress, blue Upcoming, red PR Review, near-black for the primary action.",
+      "Soft tinted stage tapes with text in the section's own deep tone: green Completed, yellow In Progress, blue Upcoming, red PR Review. The primary action alone is a solid near-black tape with white text.",
       "Barlow Condensed on tape faces and counts; Barlow for everything else; monospace only for the Markdown output.",
-      "No radius anywhere; 1px hairline rules and tape edges are the only boundaries.",
+      "Two radii: 8px on tapes, 6px on controls; 1px hairline rules and tape edges are the only boundaries.",
       "State shows on the tape itself: a failed fetch strikes the tape red, and a reported Completed item turns into a spent outline.",
       "Dense but airy work column beside a docked output panel; a single column on small screens."
     ],
     "rules": [
       {
         "name": "The Tape Is The Stage Rule",
-        "body": "Each saturated hue means one stage: green Completed, yellow In Progress, blue Upcoming, red PR Review. Review-state marks reuse the same mapping (green merged/approved, yellow pending, red changes requested, grey draft/closed). Never use a stage hue as decoration.",
+        "body": "Each stage hue identifies one section and nothing else: green Completed, yellow In Progress, blue Upcoming, red PR Review. It appears as that section's tape tint, its text-safe tone on that tint, and the swatch of a move into that stage. Review-state marks carry no stage colour. The only other uses are semantic: red-text for errors and failed fetches, green-text for success and the spent outline. Never use a stage hue as decoration.",
         "section": "colors"
       },
       {
-        "name": "The Dark Ink On Yellow Rule",
-        "body": "Yellow tape always carries on-yellow text. White text is reserved for blue, green, red, grey and black tape.",
+        "name": "The Tone On Tint Rule",
+        "body": "A tinted tape always carries its own section's text-safe tone (green-text, yellow-text, blue-text, red-text), never white or on-yellow. White belongs only to the solid Generate tape; on-yellow only to text selection.",
         "section": "colors"
       },
       {
         "name": "The Condensed Belongs To Tape Rule",
-        "body": "Barlow Condensed appears only on tape faces (stage heads, numbers, marks, Generate) and on lane counts. Headings, titles, buttons and controls stay in Barlow.",
+        "body": "Barlow Condensed appears only on tape faces (numbers, Generate), lane titles and on lane counts. Headings, titles, buttons and controls stay in Barlow.",
         "section": "typography"
       },
       {
@@ -478,29 +600,33 @@
       },
       {
         "name": "The Flat Vinyl Rule",
-        "body": "Tape is flat colour. Never add gloss, gradients, emboss or lifting shadows.",
+        "body": "Tape is flat colour: one even tint, or solid near-black for Generate. Never add gloss, gradients, emboss or lifting shadows.",
         "section": "elevation"
       },
       {
-        "name": "The No Radius Rule",
-        "body": "Radius is zero everywhere. Edges are hairlines or the edges of the tape.",
+        "name": "The Two Radii Rule",
+        "body": "Tapes are 8px, controls are 6px. The mark pill and the round swatch are the only other shapes; never introduce a third corner size or a sharp-cornered tape or control.",
         "section": "shapes"
       }
     ],
     "dos": [
-      "**Do** give every item its number on a tape in its stage colour, and show state on that tape (red with strike-through for failure, outline for spent).",
-      "**Do** keep the stage mapping fixed: green Completed, yellow In Progress, blue Upcoming, red PR Review, near-black for the single primary action.",
-      "**Do** put on-yellow text on yellow tape and white text on every other tape.",
+      "**Do** give every item its number on a tape in its stage tint, and show state on that tape (red tint with strike-through for failure, green-text outline for spent).",
+      "**Do** keep the stage mapping fixed: green Completed, yellow In Progress, blue Upcoming, red PR Review, solid near-black for the single primary action.",
+      "**Do** print tinted tape in its own section's text-safe tone (green-text, yellow-text, blue-text, red-text); white text only on the Generate tape.",
+      "**Do** use 8px corners on tapes and 6px on controls.",
       "**Do** separate rows with one 1px hairline, and separate surfaces by tone (ground vs panel).",
-      "**Do** name a move by the next stage, with a swatch of that stage's tape.",
+      "**Do** name a move by the next stage, led by an 8px circular swatch in that stage's hue.",
+      "**Do** keep review marks neutral (muted text on muted at 12%).",
       "**Do** keep the reprint motion short (420ms feed plus 260ms press), and drop it under reduced motion."
     ],
     "donts": [
-      "**Don't** round any corner; radius is 0px.",
+      "**Don't** fill a stage tape with solid hue or put white or on-yellow text on a tint.",
+      "**Don't** use square corners or a third radius on tapes and controls.",
+      "**Don't** colour review marks by stage or state; colour identifies the section only.",
       "**Don't** add gloss, gradients, emboss or drop/offset shadows to tape. Only the 1px inset tape edge is allowed.",
       "**Don't** wrap rows in cards or nest bordered boxes inside a lane.",
       "**Don't** use Barlow Condensed outside tape faces and lane counts.",
-      "**Don't** introduce a hue outside the stage family. Status and error colour comes from the red-text and green-text tints.",
+      "**Don't** introduce a hue outside the stage family. Status and error colour comes from the red-text and green-text tones.",
       "**Don't** add a second filled action next to the Generate tape."
     ]
   }

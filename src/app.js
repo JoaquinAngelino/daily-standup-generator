@@ -1,14 +1,12 @@
 import {
   ISSUE_SECTIONS,
   SECTION_TITLES,
-  PROJECTED_STATUSES,
   NEXT_STAGE,
   advanceRow,
   parseRepoList,
   parseRef,
   formatDate,
   formatRange,
-  formatProjected,
   reviewStatus,
   findIssueRef,
   node,
@@ -24,7 +22,7 @@ const STATE_KEY = "dsg.state.v1";
 const TOKEN_KEY = "dsg.token";
 const LANG_KEY = "dsg.lang";
 const SECTIONS = [...ISSUE_SECTIONS, "prs"];
-const TONE = { completed: "green", inProgress: "yellow", upcoming: "blue", prs: "red" };
+const TONE = { completed: "green", inProgress: "yellow", upcoming: "blue", prs: "purple" };
 const SVG_NS = "http://www.w3.org/2000/svg";
 const ICONS = {
   x: "M4 4l8 8M12 4l-8 8",
@@ -73,14 +71,14 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const defaultRepo = () => state.repos[0] ?? "";
 
 const ROW_FACTORIES = {
-  completed: () => ({ id: uid(), ref: "", repo: defaultRepo(), etaFrom: "", etaTo: "", projDate: "", projStatus: "", subtasks: [] }),
+  completed: () => ({ id: uid(), ref: "", repo: defaultRepo(), etaFrom: "", etaTo: "", subtasks: [] }),
   inProgress: () => ({ id: uid(), ref: "", repo: defaultRepo(), eta: "", subtasks: [] }),
   upcoming: () => ({ id: uid(), ref: "", repo: defaultRepo(), eta: "", subtasks: [] }),
   prs: () => ({ id: uid(), ref: "", repo: defaultRepo() }),
 };
 
 const SUBTASK_FACTORIES = {
-  completed: () => ({ id: uid(), desc: "", etaFrom: "", etaTo: "", projDate: "", projStatus: "" }),
+  completed: () => ({ id: uid(), desc: "", etaFrom: "", etaTo: "" }),
   inProgress: () => ({ id: uid(), desc: "", eta: "" }),
   upcoming: () => ({ id: uid(), desc: "", eta: "" }),
 };
@@ -208,41 +206,8 @@ function dateInput(obj, key, labelKey) {
   return input;
 }
 
-function statusSelect(obj) {
-  const select = el(
-    "select",
-    {
-      "aria-label": t("projectedStatus"),
-      "data-focus-key": `${obj.id}:projStatus`,
-      onchange: () => {
-        obj.projStatus = select.value;
-        save();
-      },
-    },
-    PROJECTED_STATUSES.map((s) => el("option", { value: s, textContent: s || "—" })),
-  );
-  select.value = obj.projStatus ?? "";
-  return select;
-}
-
 function metaGroup(labelKey, controls) {
   return el("span", { class: "meta-group" }, [el("span", { class: "meta-label", textContent: t(labelKey) }), ...controls]);
-}
-
-function projectedGroup(obj) {
-  if (obj.projDate || obj.projStatus || obj.showProjected) {
-    return metaGroup("projected", [dateInput(obj, "projDate", "projected"), statusSelect(obj)]);
-  }
-  return el("button", {
-    type: "button",
-    class: "btn-text btn-small",
-    onclick: () => {
-      obj.showProjected = true;
-      save();
-      render();
-      document.querySelector(`[data-focus-key="${obj.id}:projDate"]`)?.focus();
-    },
-  }, [icon("plus"), el("span", { textContent: t("projected") })]);
 }
 
 function metaFields(key, obj) {
@@ -254,7 +219,6 @@ function metaFields(key, obj) {
         el("span", { class: "meta-sep" }, [icon("arrow")]),
         dateInput(obj, "etaTo", "etaTo"),
       ]),
-      projectedGroup(obj),
     ];
   }
   return [metaGroup("eta", [dateInput(obj, "eta", "eta")])];
@@ -320,13 +284,11 @@ function addRow(key) {
 function titleState(key, row) {
   const error = rowErrors.get(row.id);
   if (error) return { text: error(), cls: "item-title is-error" };
+  if (row.title) return { text: row.title, cls: row.fetching ? "item-title is-loading" : "item-title" };
   if (row.fetching) return { text: t("fetching"), cls: "item-title is-muted" };
-  if (row.title) return { text: row.title, cls: "item-title" };
   if (!row.ref?.trim()) return { text: t(key === "prs" ? "titleEmptyPr" : "titleEmpty"), cls: "item-title is-muted" };
-  return { text: t(getToken() ? "titlePending" : "titleNoToken"), cls: "item-title is-muted" };
+  return { text: getToken() ? "" : t("titleNoToken"), cls: "item-title is-muted" };
 }
-
-const STATUS_TONE = { Merged: "green", Approved: "green", "Changes Requested": "red", Pending: "yellow", Draft: "grey", Closed: "grey" };
 
 function formatDay(iso) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -372,7 +334,7 @@ function renderRow(key, row) {
   const tapeInput = el("input", {
     class: "tape-input",
     value: row.ref ?? "",
-    placeholder: isPr ? "PR" : "123",
+    placeholder: "#",
     autocomplete: "off",
     spellcheck: false,
     "aria-label": t(isPr ? "pr" : "issue"),
@@ -407,14 +369,14 @@ function renderRow(key, row) {
   }
   const removeX = key === "completed" ? null : iconButton("x", t("remove"), () => removeItem(state.sections[key], row));
   const status = isPr && row.status && !rowErrors.has(row.id)
-    ? el("span", { class: `mark mark--${STATUS_TONE[row.status] ?? "grey"}`, textContent: row.status })
+    ? el("span", { class: "mark", textContent: row.status })
     : null;
 
   const meta = [...metaFields(key, row), isPr ? null : addSubtaskButton(key, row)].filter(Boolean);
 
   return el("article", { class: classes, "data-id": row.id }, [
     el("div", { class: "item-main" }, [
-      el("label", { class: `tape tape--${TONE[key]} item-tape` }, [tapeInput]),
+      el("label", { class: "tape item-tape" }, [tapeInput]),
       el("div", { class: "item-body" }, [
         el("p", { class: "item-headline" }, [el("span", { class: title.cls, textContent: title.text }), status]),
         spent ? el("p", { class: "item-note", textContent: t("reportedOn", { date: formatDay(row.reportedOn) }) }) : null,
@@ -520,9 +482,11 @@ async function commitRef(key, row) {
   const raw = (row.ref ?? "").trim();
   const ref = parseRef(raw, row.repo);
   rowErrors.delete(row.id);
-  row.title = "";
-  delete row.status;
   delete row.reportedOn;
+  if (!raw) {
+    row.title = "";
+    delete row.status;
+  }
   if (ref) {
     row.ref = String(ref.number);
     row.repo = ref.repo;
@@ -546,6 +510,8 @@ async function commitRef(key, row) {
       if (key === "prs") row.status = reviewStatus(item);
     }
   } catch (err) {
+    row.title = "";
+    delete row.status;
     rowErrors.set(row.id, () => describeError(err, raw));
   } finally {
     delete row.fetching;
@@ -556,10 +522,7 @@ async function commitRef(key, row) {
 
 function detailNodes(key, obj) {
   if (key === "completed") {
-    return [
-      node("ETA", formatRange(obj.etaFrom, obj.etaTo)),
-      node("Projected Overall Feature Delivery (Alpha)", formatProjected(obj.projDate, obj.projStatus)),
-    ];
+    return [node("ETA", formatRange(obj.etaFrom, obj.etaTo))];
   }
   return [node("ETA", formatDate(obj.eta))];
 }

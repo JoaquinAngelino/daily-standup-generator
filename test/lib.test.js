@@ -4,7 +4,6 @@ import {
   parseRepoList,
   parseRef,
   formatRange,
-  formatProjected,
   reviewStatus,
   findIssueRef,
   node,
@@ -21,8 +20,8 @@ test("advanceRow maps ETAs onto the next stage and drops stage-only state", () =
     id: "a", ref: "5", repo: "o/r", title: "T", eta: "2026-11-14", subtasks: [{ id: "s", desc: "d", eta: "2026-11-13" }],
   });
   assert.deepEqual(advanceRow(upcoming, "completed"), {
-    id: "a", ref: "5", repo: "o/r", title: "T", etaFrom: "", etaTo: "2026-11-14", projDate: "", projStatus: "",
-    subtasks: [{ id: "s", desc: "d", etaFrom: "", etaTo: "2026-11-13", projDate: "", projStatus: "" }],
+    id: "a", ref: "5", repo: "o/r", title: "T", etaFrom: "", etaTo: "2026-11-14",
+    subtasks: [{ id: "s", desc: "d", etaFrom: "", etaTo: "2026-11-13" }],
   });
 });
 
@@ -40,11 +39,9 @@ test("parseRef accepts number, #number, owner/repo#number and URLs", () => {
   assert.equal(parseRef("  ", "o/r"), null);
 });
 
-test("formatRange and formatProjected", () => {
+test("formatRange", () => {
   assert.equal(formatRange("2026-11-03", "2026-11-05"), "11-03 -> 11-05");
   assert.equal(formatRange("", "2026-11-05"), "11-05");
-  assert.equal(formatProjected("2026-11-10", "Pending merge"), "11-10 Pending merge");
-  assert.equal(formatProjected("", ""), "");
 });
 
 test("reviewStatus uses PR state, then latest opinionated reviews", () => {
@@ -74,7 +71,7 @@ test("toMarkdown renders sections, nesting and skips empty values", () => {
       items: [
         issueNode(issue, [
           node("ETA", "11-03 -> 11-05"),
-          node("Projected Overall Feature Delivery (Alpha)", ""),
+          node("Notes", ""),
           node("Subtask description", "API", [node("ETA", "11-04")]),
         ]),
       ],

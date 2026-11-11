@@ -7,20 +7,18 @@ export const SECTION_TITLES = {
   prs: "PR Review",
 };
 
-export const PROJECTED_STATUSES = ["", "Pending merge", "Pending code review", "Merged"];
-
 export const NEXT_STAGE = { upcoming: "inProgress", inProgress: "completed" };
 
 // Carries an item into the next stage, mapping its single ETA onto that stage's fields.
 export function advanceRow(row, to) {
   const subtasks = (row.subtasks ?? []).map((s) =>
     to === "completed"
-      ? { id: s.id, desc: s.desc ?? "", etaFrom: "", etaTo: s.eta ?? "", projDate: "", projStatus: "" }
+      ? { id: s.id, desc: s.desc ?? "", etaFrom: "", etaTo: s.eta ?? "" }
       : { id: s.id, desc: s.desc ?? "", eta: s.eta ?? "" },
   );
   const base = { id: row.id, ref: row.ref ?? "", repo: row.repo ?? "", title: row.title ?? "", subtasks };
   return to === "completed"
-    ? { ...base, etaFrom: "", etaTo: row.eta ?? "", projDate: "", projStatus: "" }
+    ? { ...base, etaFrom: "", etaTo: row.eta ?? "" }
     : { ...base, eta: row.eta ?? "" };
 }
 
@@ -57,10 +55,6 @@ export function formatRange(from, to) {
   const a = formatDate(from);
   const b = formatDate(to);
   return a && b ? `${a} -> ${b}` : a || b;
-}
-
-export function formatProjected(date, status) {
-  return [formatDate(date), status].filter(Boolean).join(" ");
 }
 
 // `pr` is the GraphQL PullRequest shape requested in github.js.
