@@ -451,6 +451,23 @@ function describeError(err, ref = "") {
   }
 }
 
+// Issues may appear once across the standup issue lanes, PRs once in PR Review, tasks once in the tracker.
+function duplicatePlace(key, row, earlierOnly = false) {
+  const pools = key === "tracker"
+    ? TRACKER_STATUSES.map((s) => [s, state.tracker.filter((task) => task.status === s)])
+    : (key === "prs" ? ["prs"] : ISSUE_SECTIONS).map((k) => [k, state.sections[k]]);
+  for (const [place, list] of pools) {
+    for (const other of list) {
+      if (other === row) {
+        if (earlierOnly) return null;
+      } else if (sameRef(other, row)) return place;
+    }
+  }
+  return null;
+}
+
+const duplicateError = (row, place) => () => t("errDuplicate", { ref: row.ref.trim(), place: t(place) });
+
 async function commitRef(key, row) {
   const raw = (row.ref ?? "").trim();
   const ref = parseRef(raw, row.repo);
@@ -468,6 +485,11 @@ async function commitRef(key, row) {
   if (!raw) return render();
   if (!ref) {
     rowErrors.set(row.id, () => t("errBadRef"));
+    return render();
+  }
+  const place = duplicatePlace(key, row);
+  if (place) {
+    rowErrors.set(row.id, duplicateError(row, place));
     return render();
   }
   const token = getToken();
@@ -563,7 +585,10 @@ async function generate() {
   const jobs = [];
   for (const key of SECTIONS) {
     for (const row of state.sections[key]) {
-      if (row.ref?.trim()) jobs.push({ key, row, result: buildItem(key, row, client, loadIssue) });
+      if (!row.ref?.trim()) continue;
+      const place = duplicatePlace(key, row, true);
+      if (place) rowErrors.set(row.id, duplicateError(row, place));
+      else jobs.push({ key, row, result: buildItem(key, row, client, loadIssue) });
     }
   }
   const results = await Promise.allSettled(jobs.map((job) => job.result));
