@@ -22,10 +22,11 @@ import {
   mergePrs,
   taskToRow,
   sameRef,
+  reorder,
 } from "./lib.js";
 import { createClient, GitHubError } from "./github.js";
 import { t, setLanguage, getLanguage, applyTranslations } from "./i18n.js";
-import { TONE, $, reducedMotion, el, icon, iconButton, scrollToItem } from "./ui.js";
+import { TONE, $, reducedMotion, el, icon, iconButton, scrollToItem, dragHandle } from "./ui.js";
 import { initTracker, renderTracker, refreshTracker } from "./tracker.js";
 
 const STATE_KEY = "dsg.state.v1";
@@ -248,6 +249,20 @@ function moveRow(from, row) {
   }, 800);
 }
 
+function reorderRow(key, row, beforeId) {
+  const list = state.sections[key];
+  state.sections[key] = reorder(list, row, list.find((r) => r.id === beforeId));
+  save();
+  render();
+}
+
+function stepRow(key, row, dir) {
+  const list = state.sections[key];
+  const j = list.indexOf(row) + dir;
+  if (j < 0 || j >= list.length) return;
+  reorderRow(key, row, (dir < 0 ? list[j] : list[j + 1])?.id ?? null);
+}
+
 function addRow(key) {
   const row = ROW_FACTORIES[key]();
   state.sections[key].push(row);
@@ -352,6 +367,12 @@ function renderRow(key, row) {
   const meta = [...metaFields(key, row), isPr ? null : addSubtaskButton(key, row)].filter(Boolean);
 
   return el("article", { class: classes, "data-id": row.id }, [
+    dragHandle(t("dragHandle"), {
+      lanes: () => [$(`[data-section="${key}"]`)],
+      onDrop: (_, beforeId) => reorderRow(key, row, beforeId),
+      step: (dir) => stepRow(key, row, dir),
+      focusKey: `${row.id}:drag`,
+    }),
     el("div", { class: "item-main" }, [
       el("label", { class: "tape item-tape" }, [tapeInput]),
       el("div", { class: "item-body" }, [
@@ -476,7 +497,7 @@ const duplicateError = (row, place) => () => t("errDuplicate", { ref: row.ref.tr
 function clearFetched(key, row) {
   row.title = "";
   if (key !== "tracker") delete row.status;
-  else ["kind", "state", "assignees", "author", "prs"].forEach((field) => delete row[field]);
+  else ["kind", "state", "assignees", "author", "reviewers", "prs"].forEach((field) => delete row[field]);
 }
 
 async function fetchTracker(client, ref, task) {

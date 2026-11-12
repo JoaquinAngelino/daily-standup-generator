@@ -19,6 +19,8 @@ import {
   sortTasks,
   trackerInfo,
   mergePrs,
+  reviewers,
+  reorder,
 } from "../src/lib.js";
 
 test("advanceRow maps ETAs onto the next stage and drops stage-only state", () => {
@@ -180,15 +182,33 @@ test("trackerInfo reads state, people and related PRs, deduped and open first", 
     {
       kind: "issue", title: "T", state: "open", assignees: ["ana"], author: "",
       prs: [
-        { number: 9, url: "o/r/9", repo: "o/r", title: "P9", state: "draft", assignees: ["leo"], author: "joe" },
-        { number: 8, url: "o/r/8", repo: "o/r", title: "P8", state: "merged", assignees: [], author: "joe" },
-        { number: 8, url: "o/other/8", repo: "o/other", title: "P8", state: "closed", assignees: [], author: "joe" },
+        { number: 9, url: "o/r/9", repo: "o/r", title: "P9", state: "draft", assignees: ["leo"], author: "joe", reviewers: [] },
+        { number: 8, url: "o/r/8", repo: "o/r", title: "P8", state: "merged", assignees: [], author: "joe", reviewers: [] },
+        { number: 8, url: "o/other/8", repo: "o/other", title: "P8", state: "closed", assignees: [], author: "joe", reviewers: [] },
       ],
     },
   );
   assert.deepEqual(
     trackerInfo({ __typename: "PullRequest", title: "P", state: "CLOSED", isDraft: false, author: { login: "joe" }, assignees: { nodes: [] } }),
-    { kind: "pr", title: "P", state: "closed", assignees: [], author: "joe", prs: [] },
+    { kind: "pr", title: "P", state: "closed", assignees: [], author: "joe", reviewers: [], prs: [] },
+  );
+});
+
+test("reviewers lists pending requests and human reviews, skipping bots and the author", () => {
+  assert.deepEqual(
+    reviewers({
+      author: { login: "joe" },
+      latestReviews: {
+        nodes: [
+          { state: "COMMENTED", author: { __typename: "Bot", login: "greptile-apps" } },
+          { state: "APPROVED", author: { __typename: "User", login: "lu" } },
+          { state: "COMMENTED", author: { __typename: "User", login: "joe" } },
+          { state: "CHANGES_REQUESTED", author: { __typename: "User", login: "tal" } },
+        ],
+      },
+      reviewRequests: { nodes: [{ requestedReviewer: { login: "tal" } }, { requestedReviewer: { slug: "core" } }] },
+    }),
+    [{ login: "lu", state: "approved" }, { login: "tal", state: "requested" }, { login: "core", state: "requested" }],
   );
 });
 
@@ -208,4 +228,11 @@ test("sameRef matches number and repo, ignoring repo case and ref form", () => {
 test("daysBetween counts calendar days", () => {
   assert.equal(daysBetween("2026-10-30", "2026-11-02"), 3);
   assert.equal(daysBetween("2026-11-11", "2026-11-11"), 0);
+});
+
+test("reorder moves an item before another, or to the end", () => {
+  const [a, b, c] = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  assert.deepEqual(reorder([a, b, c], c, a), [c, a, b]);
+  assert.deepEqual(reorder([a, b, c], a, undefined), [b, c, a]);
+  assert.deepEqual(reorder([a, b, c], a, c), [b, a, c]);
 });

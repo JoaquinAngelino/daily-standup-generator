@@ -1,6 +1,6 @@
-import { TRACKER_STAGES, TASK_FLAGS, PRIORITIES, parseRef, daysBetween, sortTasks, prKey, prInfo, mergePrs } from "./lib.js";
+import { TRACKER_STAGES, TASK_FLAGS, PRIORITIES, parseRef, daysBetween, sortTasks, prKey, prInfo, mergePrs, reorder } from "./lib.js";
 import { t, getLanguage } from "./i18n.js";
-import { el, icon, iconButton, scrollToItem } from "./ui.js";
+import { el, icon, iconButton, scrollToItem, dragHandle } from "./ui.js";
 
 const SORTS = ["priority", "eta", "manual"];
 const STATE_TONE = { open: "green", draft: "muted", merged: "purple" };
@@ -62,6 +62,32 @@ function update(task, field, value, { touch = false, move = false } = {}) {
   }, 800);
 }
 
+const laneTasks = (stage) => sortTasks(ctx.state.tracker.filter((task) => task.stage === stage), ctx.state.trackerSort);
+
+// Freezes the order on screen first, so switching to manual sorting moves nothing else.
+function dropTask(task, stage, beforeId) {
+  const shown = TRACKER_STAGES.flatMap(laneTasks);
+  ctx.state.tracker = reorder(shown, task, shown.find((x) => x.id === beforeId));
+  ctx.state.trackerSort = "manual";
+  if (task.stage !== stage) {
+    task.stage = stage;
+    task.updated = ctx.today();
+  }
+  movedId = task.id;
+  ctx.save();
+  ctx.render();
+  setTimeout(() => {
+    movedId = null;
+  }, 800);
+}
+
+function stepTask(task, dir) {
+  const lane = laneTasks(task.stage);
+  const j = lane.indexOf(task) + dir;
+  if (j < 0 || j >= lane.length) return;
+  dropTask(task, task.stage, (dir < 0 ? lane[j] : lane[j + 1])?.id ?? null);
+}
+
 export async function refreshTracker() {
   if (refreshing) return;
   refreshing = true;
@@ -95,8 +121,11 @@ function stateMark(kind, state, text) {
   return [el("span", { class: `swatch swatch--${tone}`, "aria-hidden": "true" }), el("span", { textContent: text })];
 }
 
-// PR assignees are rarely set, so the author stands in.
 function peopleText(item) {
+  if (item.reviewers) {
+    if (!item.reviewers.length) return t("noReviewer");
+    return t("reviewLabel", { list: item.reviewers.map((r) => `@${r.login} (${t(`review_${r.state}`)})`).join(", ") });
+  }
   if (item.assignees?.length) return item.assignees.map((login) => `@${login}`).join(", ");
   return item.author ? t("byAuthor", { login: item.author }) : t("unassigned");
 }
@@ -278,6 +307,12 @@ function renderTask(task) {
   const standup = standupControl(task);
 
   return el("article", { class: classes, "data-id": task.id }, [
+    dragHandle(t("dragHandle"), {
+      lanes: () => [...document.querySelectorAll("#trackerView .lane")],
+      onDrop: (lane, beforeId) => dropTask(task, lane.dataset.stage, beforeId),
+      step: (dir) => stepTask(task, dir),
+      focusKey: `${task.id}:drag`,
+    }),
     el("div", { class: "item-main" }, [
       el("label", { class: "tape item-tape" }, [tapeInput]),
       el("div", { class: "item-body" }, [
@@ -334,7 +369,7 @@ export function renderTracker() {
   renderBar();
   for (const stage of TRACKER_STAGES) {
     const lane = document.querySelector(`[data-stage="${stage}"]`);
-    const tasks = sortTasks(ctx.state.tracker.filter((task) => task.stage === stage), ctx.state.trackerSort);
+    const tasks = laneTasks(stage);
     const count = tasks.length;
     lane.querySelector(".lane-count").textContent = count ? t(count === 1 ? "countTask" : "countTasks", { count }) : "";
 

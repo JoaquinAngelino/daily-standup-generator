@@ -30,6 +30,8 @@ const ITEM_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
         author { login }
         repository { nameWithOwner }
         assignees(first: 10) { nodes { login } }
+        reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } ... on Team { slug } } } }
+        latestReviews(first: 10) { nodes { state author { __typename login } } }
       }
     }
   }
@@ -40,6 +42,8 @@ fragment LinkedPr on PullRequest {
   author { login }
   repository { nameWithOwner }
   assignees(first: 5) { nodes { login } }
+  reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } ... on Team { slug } } } }
+  latestReviews(first: 10) { nodes { state author { __typename login } } }
 }`;
 
 export class GitHubError extends Error {

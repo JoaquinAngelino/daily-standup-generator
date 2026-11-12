@@ -269,6 +269,46 @@ h1, h2, p { margin: 0; }
 }
 
 .item:last-child { border-bottom: 0; }
+.item { position: relative; }
+
+.drag-handle {
+  position: absolute;
+  top: 22px;
+  left: -17px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  cursor: grab;
+  opacity: 0;
+  touch-action: none;
+  transition: opacity 120ms;
+}
+
+.item:hover > .drag-handle,
+.drag-handle:focus-visible { opacity: 1; }
+.drag-handle:hover { color: var(--ink); }
+.drag-handle .icon { width: 14px; height: 14px; stroke-width: 2.4; }
+.item.is-dragging { opacity: 0.45; }
+body:has(.is-dragging) { cursor: grabbing; user-select: none; }
+
+.drop-marker {
+  position: fixed;
+  z-index: 10;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+  pointer-events: none;
+}
+
+@media (hover: none) {
+  .drag-handle { opacity: 0.6; }
+}
 
 .item-main {
   display: grid;
@@ -755,6 +795,7 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
   .item-actions { grid-column: 1 / -1; grid-row: 2; }
   .item-meta { grid-column: 1 / -1; grid-row: 3; }
   .subtasks { margin-left: 0; }
+  .drag-handle { left: -12px; width: 12px; }
   #trackerView .item-actions { grid-column: 2; grid-row: 1; justify-content: flex-end; }
   #trackerView .item-body { grid-column: 1 / -1; grid-row: 2; }
   #trackerView .item-meta { grid-row: 3; }
@@ -768,5 +809,5 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 @media (prefers-reduced-motion: reduce) {
   .is-pressed .item-tape, .generate.is-busy::after { animation: none; }
-  .btn, .btn-text, .generate, .tape, .repo-select, .pill-select, .tab { transition: none; }
+  .btn, .btn-text, .generate, .tape, .repo-select, .pill-select, .tab, .drag-handle { transition: none; }
 }

@@ -77,9 +77,34 @@ export const prKey = (pr) => `${pr.repo}#${pr.number}`.toLowerCase();
 
 const people = (node) => ({ assignees: (node.assignees?.nodes ?? []).map((a) => a.login), author: node.author?.login ?? "" });
 
+const REVIEW_STATE = { APPROVED: "approved", CHANGES_REQUESTED: "changes", COMMENTED: "commented", DISMISSED: "commented" };
+
+// Pending requests plus people who already reviewed; bots and the author are left out.
+export function reviewers(node) {
+  const found = new Map();
+  for (const review of node.latestReviews?.nodes ?? []) {
+    const login = review.author?.login;
+    if (!login || review.author.__typename === "Bot" || login === node.author?.login || !REVIEW_STATE[review.state]) continue;
+    found.set(login.toLowerCase(), { login, state: REVIEW_STATE[review.state] });
+  }
+  for (const request of node.reviewRequests?.nodes ?? []) {
+    const login = request.requestedReviewer?.login ?? request.requestedReviewer?.slug;
+    if (login) found.set(login.toLowerCase(), { login, state: "requested" });
+  }
+  return [...found.values()];
+}
+
 export function prInfo(node, repo = "") {
   const state = itemState(node);
-  return { number: node.number, url: node.url, repo: node.repository?.nameWithOwner ?? repo, title: node.title ?? "", state, ...people(node) };
+  return {
+    number: node.number,
+    url: node.url,
+    repo: node.repository?.nameWithOwner ?? repo,
+    title: node.title ?? "",
+    state,
+    ...people(node),
+    reviewers: reviewers(node),
+  };
 }
 
 // Dedupes by repo and number, drops hidden keys, open PRs first.
@@ -107,8 +132,16 @@ export function trackerInfo(node) {
     title: node.title,
     state: itemState(node),
     ...people(node),
+    ...(kind === "pr" ? { reviewers: reviewers(node) } : {}),
     prs: kind === "issue" ? linkedPrs(node) : [],
   };
+}
+
+// Moves `item` before `before` (or to the end) without mutating `list`.
+export function reorder(list, item, before) {
+  const rest = list.filter((x) => x !== item);
+  const at = before ? rest.indexOf(before) : -1;
+  return at < 0 ? [...rest, item] : [...rest.slice(0, at), item, ...rest.slice(at)];
 }
 
 export function sameRef(a, b) {

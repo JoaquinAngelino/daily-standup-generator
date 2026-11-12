@@ -29,10 +29,11 @@ The user types numbers and dates; GitHub supplies everything else (titles, links
 
 - Sections: Completed (ETA range, subtasks), In Progress and Upcoming (ETA, subtasks), PR Review (PR plus repo).
 - Tracker tab (`#tracker`): a longer-lived list of issues, PRs or free-text tasks in three sections (Not started, In progress, Done).
-  - Each task shows its GitHub state (open, draft, closed or merged), its assignees and, for issues, the PRs that close, are connected to or mention it, with their states and people (assignees, or the author when nobody is assigned). PRs can be added by number or URL, or removed, and that choice survives refreshes. This is refreshed from GitHub the first time the tab opens, or on demand.
+  - Each task shows its GitHub state (open, draft, closed or merged), its assignees and, for issues, the PRs that close, are connected to or mention it, with their states and reviewers (pending requests and submitted reviews, without bots). PRs can be added by number or URL, or removed, and that choice survives refreshes. This is refreshed from GitHub the first time the tab opens, or on demand.
   - Each task can have a status (Blocked, Waiting for review, Waiting for info, On hold), a priority, an ETA and a short note.
-  - Lanes sort by priority, by ETA, or in the order added.
+  - Lanes sort by priority, by ETA, or manually by dragging.
   - A task can be added to the matching standup lane (PRs go to PR Review), and each issue or PR may be tracked only once.
+- Items in both views can be reordered by dragging their grip, or with the arrow keys. In the standup this sets the order of the generated output.
 - References accepted as `123`, `owner/repo#123`, or a GitHub issue/PR URL; repos are configured in the app, the first being the default.
 - The output format is a team convention and must not change: `### Section` headings; `- **GitHub Issue:** [n](url) — title`; nested `**ETA:**`, `**Subtask description:**`; PR items with `**GitHub Issue:**` and `**Status:**`.
 - Static site on GitHub Pages: plain HTML, CSS and JavaScript modules, no build step, no backend. All state (rows, settings, token) lives in the browser and survives restarts.
