@@ -5,6 +5,7 @@ const ICONS = {
   arrow: "M3 8h10M9 4l4 4-4 4",
   check: "M3 8.5l3.5 3.5L13 4.5",
   grip: "M6 3.5h0M10 3.5h0M6 8h0M10 8h0M6 12.5h0M10 12.5h0",
+  calendar: "M2.5 4h11v9.5h-11zM2.5 7h11M5.5 2v3M10.5 2v3",
 };
 
 export const TONE = { completed: "green", inProgress: "yellow", upcoming: "blue", prs: "purple" };

@@ -167,6 +167,8 @@ h1, h2, p { margin: 0; }
 
 .setting { display: grid; gap: 10px; align-content: start; }
 
+#trackerView { max-width: 1600px; }
+
 .work {
   display: grid;
   gap: 28px;
@@ -372,11 +374,10 @@ body:has(.is-dragging) { cursor: grabbing; user-select: none; }
 .item-note { color: var(--muted); font-size: 13px; }
 
 .item-actions { display: flex; align-items: center; gap: 6px; }
-.item-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.item-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 .item-pills:empty { display: none; }
 
-.title-input,
-.item-meta .note-input {
+.title-input {
   margin-left: -8px;
   padding: 0 7px;
   border-color: transparent;
@@ -394,13 +395,78 @@ body:has(.is-dragging) { cursor: grabbing; user-select: none; }
   resize: none;
   field-sizing: content;
 }
-.note-input { flex: 1 1 220px; }
+.note-group { flex: 1 1 320px; }
+
+.eta-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  color: var(--ink);
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.eta-chip .icon { width: 14px; height: 14px; color: var(--muted); }
+.eta-label { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.eta-date { font-weight: 600; }
+.eta-rel { color: var(--muted); }
+.eta-chip:hover { background: color-mix(in srgb, var(--muted) 22%, transparent); }
+.eta-chip:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.eta-chip.is-empty {
+  border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.eta-chip.is-empty:hover { border-color: var(--muted); color: var(--ink); }
+.eta-chip.is-late { background: color-mix(in srgb, var(--red) 14%, transparent); }
+.eta-chip.is-late .icon,
+.eta-chip.is-late .eta-date,
+.eta-chip.is-late .eta-rel { color: var(--red-text); }
+.eta-chip.is-soon { background: color-mix(in srgb, var(--yellow) 28%, transparent); }
+.eta-chip.is-soon .icon,
+.eta-chip.is-soon .eta-rel { color: var(--yellow-text); }
+
+.eta-chip .eta-picker {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.eta-chip .eta-picker::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; cursor: pointer; }
+
+.item-meta .note-input {
+  flex: 1;
+  border-color: color-mix(in srgb, var(--muted) 30%, transparent);
+  background-color: color-mix(in srgb, var(--field) 50%, transparent);
+}
+
+.item-meta .note-input.has-text {
+  border-color: transparent;
+  background-color: color-mix(in srgb, var(--muted) 14%, transparent);
+  font-weight: 500;
+}
 
 .title-input:hover,
-.note-input:hover { border-color: var(--rule); }
+.item-meta .note-input:hover { border-color: var(--muted); }
 
 .title-input:focus,
-.note-input:focus { border-color: var(--muted); background-color: var(--field); outline: none; }
+.item-meta .note-input:focus { border-color: var(--muted); background-color: var(--field); outline: none; }
 .item-x { grid-column: 4; grid-row: 1; }
 
 .mark {
@@ -525,7 +591,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; cursor: poin
 input[type="date"]:hover::-webkit-calendar-picker-indicator,
 input[type="date"]:focus::-webkit-calendar-picker-indicator { opacity: 0.6; }
 input[type="date"].is-empty:not(:focus) { color: var(--muted); }
-input[type="date"].is-overdue { color: var(--red-text); }
 input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; }
 
 .item-meta select,
@@ -809,5 +874,5 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 @media (prefers-reduced-motion: reduce) {
   .is-pressed .item-tape, .generate.is-busy::after { animation: none; }
-  .btn, .btn-text, .generate, .tape, .repo-select, .pill-select, .tab, .drag-handle { transition: none; }
+  .btn, .btn-text, .generate, .tape, .repo-select, .pill-select, .tab, .drag-handle, .eta-chip { transition: none; }
 }

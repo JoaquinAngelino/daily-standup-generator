@@ -863,8 +863,6 @@ function init() {
     removeItem,
     commitRef,
     titleState,
-    dateInput,
-    metaGroup,
     client: () => (getToken() ? createClient(getToken()) : null),
     describeError,
     repoSelect,

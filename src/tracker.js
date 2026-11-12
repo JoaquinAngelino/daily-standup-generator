@@ -281,6 +281,50 @@ function textInput(task, field, labelKey, className) {
   return input;
 }
 
+function etaChip(task) {
+  const input = el("input", {
+    type: "date",
+    class: "eta-picker",
+    value: task.eta ?? "",
+    "aria-label": t("eta"),
+    "data-focus-key": `${task.id}:eta`,
+    onchange: () => {
+      task.eta = input.value;
+      ctx.save();
+      ctx.render();
+    },
+    onclick: () => {
+      try {
+        input.showPicker?.();
+      } catch {
+        /* picker unavailable: typing still works */
+      }
+    },
+  });
+  if (!task.eta) {
+    return el("label", { class: "eta-chip is-empty" }, [icon("calendar"), el("span", { textContent: t("setEta") }), input]);
+  }
+  const days = daysBetween(ctx.today(), task.eta);
+  const open = task.stage !== "done";
+  const tone = open && days < 0 ? " is-late" : open && days <= 1 ? " is-soon" : "";
+  const [y, m, d] = task.eta.split("-").map(Number);
+  const date = new Intl.DateTimeFormat(getLanguage(), { month: "short", day: "numeric" }).format(new Date(y, m - 1, d));
+  const when = new Intl.RelativeTimeFormat(getLanguage(), { numeric: "auto" }).format(days, "day");
+  return el("label", { class: `eta-chip${tone}` }, [
+    icon("calendar"),
+    el("span", { class: "eta-label", textContent: t("eta") }),
+    el("span", { class: "eta-date", textContent: date }),
+    open ? el("span", { class: "eta-rel", textContent: when }) : null,
+    input,
+  ]);
+}
+
+function noteField(task) {
+  const input = textInput(task, "note", "note", `note-input${task.note ? " has-text" : ""}`);
+  input.addEventListener("input", () => input.classList.toggle("has-text", Boolean(input.value)));
+  return el("label", { class: "meta-group note-group" }, [el("span", { class: "meta-label", textContent: t("noteLabel") }), input]);
+}
+
 function renderTask(task) {
   const classes = ["item", ctx.hasError(task.id) && "is-error", task.id === movedId && "is-pressed"].filter(Boolean).join(" ");
   const tapeInput = el("input", {
@@ -302,8 +346,6 @@ function renderTask(task) {
       e.target.blur();
     },
   });
-  const eta = ctx.dateInput(task, "eta", "eta");
-  if (task.eta && task.stage !== "done" && task.eta < ctx.today()) eta.classList.add("is-overdue");
   const standup = standupControl(task);
 
   return el("article", { class: classes, "data-id": task.id }, [
@@ -318,18 +360,18 @@ function renderTask(task) {
       el("div", { class: "item-body" }, [
         titleControl(task),
         githubLine(task),
-        el("div", { class: "item-pills" }, [
+      ]),
+      standup ? el("div", { class: "item-actions" }, [standup]) : null,
+      el("div", { class: "item-x" }, [iconButton("x", t("remove"), () => ctx.removeItem(ctx.state.tracker, task))]),
+      el("div", { class: "item-meta" }, [
+        el("span", { class: "item-pills" }, [
           pill(task, "stage", TRACKER_STAGES, "stage", {}, (v) => update(task, "stage", v, { touch: true, move: true })),
           pill(task, "flag", TASK_FLAGS, "status", FLAG_LABEL, (v) => update(task, "flag", v, { touch: true })),
           pill(task, "priority", PRIORITIES, "priority", PRIORITY_LABEL, (v) => update(task, "priority", v)),
           ctx.repoSelect("tracker", task),
         ]),
-      ]),
-      standup ? el("div", { class: "item-actions" }, [standup]) : null,
-      el("div", { class: "item-x" }, [iconButton("x", t("remove"), () => ctx.removeItem(ctx.state.tracker, task))]),
-      el("div", { class: "item-meta" }, [
-        ctx.metaGroup("eta", [eta]),
-        textInput(task, "note", "note", "note-input"),
+        etaChip(task),
+        noteField(task),
         task.updated ? el("span", { class: "meta-label", textContent: t("updated", { when: ago(task.updated) }) }) : null,
       ]),
     ]),
