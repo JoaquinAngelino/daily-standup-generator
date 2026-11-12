@@ -12,6 +12,9 @@ import {
   markdownToHtml,
   markdownToSlackText,
   advanceRow,
+  taskToRow,
+  sameRef,
+  daysBetween,
 } from "../src/lib.js";
 
 test("advanceRow maps ETAs onto the next stage and drops stage-only state", () => {
@@ -125,4 +128,23 @@ test("markdownToSlackText converts to Slack syntax", () => {
     markdownToSlackText("### Completed\n- **GitHub Issue:** [7](https://x.io/7) — a\n    - **ETA:** 1"),
     "*Completed*\n• *GitHub Issue:* [7](https://x.io/7) — a\n    • *ETA:* 1",
   );
+});
+
+test("taskToRow builds a standup row for the lane the status maps to", () => {
+  const task = { id: "t", ref: "5", repo: "o/r", title: "T", note: "n", status: "doing", updated: "2026-11-10" };
+  assert.deepEqual(taskToRow(task, "a"), { id: "a", ref: "5", repo: "o/r", title: "T", subtasks: [], eta: "" });
+  assert.deepEqual(taskToRow({ ...task, status: "done" }, "a"), {
+    id: "a", ref: "5", repo: "o/r", title: "T", subtasks: [], etaFrom: "", etaTo: "",
+  });
+});
+
+test("sameRef matches number and repo, ignoring repo case and ref form", () => {
+  assert.equal(sameRef({ ref: "5", repo: "O/R" }, { ref: "#5", repo: "o/r" }), true);
+  assert.equal(sameRef({ ref: "5", repo: "o/r" }, { ref: "x/y#5", repo: "o/r" }), false);
+  assert.equal(sameRef({ ref: "", repo: "o/r" }, { ref: "", repo: "o/r" }), false);
+});
+
+test("daysBetween counts calendar days", () => {
+  assert.equal(daysBetween("2026-10-30", "2026-11-02"), 3);
+  assert.equal(daysBetween("2026-11-11", "2026-11-11"), 0);
 });

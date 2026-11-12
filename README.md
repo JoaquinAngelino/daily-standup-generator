@@ -12,6 +12,8 @@ Live: https://joaquinangelino.github.io/daily-standup-generator/
 
 Everything saves as you type and survives browser restarts.
 
+The **Tracker** tab keeps a longer-lived task list in five statuses: To do, Doing, In review, Blocked and Done. A task can be an issue number (the title is fetched) or free text, and can have a note. **Add to standup** puts a task's issue in the matching standup lane.
+
 ## Token
 
 The app only reads issues and pull requests. Prefer a fine-grained token limited to those repos with read-only **Issues** and **Pull requests**. Fine-grained tokens cannot always reach repos where you are only a collaborator on another person's account; there a classic token with `repo` scope is needed.

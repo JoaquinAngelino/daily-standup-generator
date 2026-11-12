@@ -15,6 +15,10 @@
     <div class="main-col">
       <header class="topbar">
         <h1 class="brand" data-i18n="title">Daily Standup Generator</h1>
+        <nav class="tabs" aria-label="Views" data-i18n-label="views">
+          <a class="tab" href="#standup" aria-current="page" data-i18n="standupTab">Standup</a>
+          <a class="tab" href="#tracker" data-i18n="trackerTab">Tracker</a>
+        </nav>
         <span id="today" class="today"></span>
         <button id="settingsToggle" type="button" class="btn" aria-expanded="false" aria-controls="settings" data-i18n="settings">Settings</button>
         <label class="sr-only" for="language" data-i18n="language">Language</label>
@@ -50,7 +54,7 @@
         </div>
       </section>
 
-      <main class="work">
+      <main id="standupView" class="work">
         <section class="lane" data-section="completed" aria-labelledby="lane-completed">
           <div class="lane-head">
             <h2 id="lane-completed" class="lane-title" data-i18n="completed">Completed</h2>
@@ -91,6 +95,8 @@
           <div class="rows"></div>
         </section>
       </main>
+
+      <main id="trackerView" class="work" hidden></main>
     </div>
 
     <aside class="output" aria-labelledby="output-title">

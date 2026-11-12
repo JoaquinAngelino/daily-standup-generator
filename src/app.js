@@ -14,25 +14,20 @@ import {
   toMarkdown,
   markdownToHtml,
   markdownToSlackText,
+  TRACKER_STATUSES,
+  STANDUP_LANE,
+  taskToRow,
+  sameRef,
 } from "./lib.js";
 import { createClient, GitHubError } from "./github.js";
 import { t, setLanguage, getLanguage, applyTranslations } from "./i18n.js";
+import { TONE, $, reducedMotion, el, icon, iconButton, scrollToItem } from "./ui.js";
+import { initTracker, renderTracker } from "./tracker.js";
 
 const STATE_KEY = "dsg.state.v1";
 const TOKEN_KEY = "dsg.token";
 const LANG_KEY = "dsg.lang";
 const SECTIONS = [...ISSUE_SECTIONS, "prs"];
-const TONE = { completed: "green", inProgress: "yellow", upcoming: "blue", prs: "purple" };
-const SVG_NS = "http://www.w3.org/2000/svg";
-const ICONS = {
-  x: "M4 4l8 8M12 4l-8 8",
-  plus: "M8 3v10M3 8h10",
-  arrow: "M3 8h10M9 4l4 4-4 4",
-  check: "M3 8.5l3.5 3.5L13 4.5",
-};
-
-const $ = (sel) => document.querySelector(sel);
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function getStorage(kind) {
   try {
@@ -97,10 +92,16 @@ function loadState() {
     sections[key] = Array.isArray(rows) ? rows.filter((r) => r && typeof r === "object") : [];
     sections[key].forEach((r) => delete r.fetching);
   }
+  const tracker = Array.isArray(saved.tracker) ? saved.tracker.filter((r) => r && typeof r === "object") : [];
+  tracker.forEach((r) => {
+    delete r.fetching;
+    if (!TRACKER_STATUSES.includes(r.status)) r.status = "todo";
+  });
   return {
     repos: Array.isArray(saved.repos) ? saved.repos : [],
     output: typeof saved.output === "string" ? saved.output : "",
     sections,
+    tracker,
   };
 }
 
@@ -119,34 +120,6 @@ function getToken() {
 }
 
 const isSpent = (row) => Boolean(row.reportedOn) && row.reportedOn < todayIso();
-
-function el(tag, props = {}, children = []) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (v == null || v === false) continue;
-    if (k === "class") e.className = v;
-    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
-    else if (k in e) e[k] = v;
-    else e.setAttribute(k, v);
-  }
-  e.append(...children.filter(Boolean));
-  return e;
-}
-
-function icon(name) {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("aria-hidden", "true");
-  svg.setAttribute("class", "icon");
-  const path = document.createElementNS(SVG_NS, "path");
-  path.setAttribute("d", ICONS[name]);
-  svg.append(path);
-  return svg;
-}
-
-function iconButton(name, label, onclick) {
-  return el("button", { type: "button", class: "icon-btn", title: label, "aria-label": label, onclick }, [icon(name)]);
-}
 
 function field(obj, key, labelKey, { type = "text", options, placeholder, className = "", hideLabel = false, onCommit } = {}) {
   let control;
@@ -264,9 +237,7 @@ function moveRow(from, row) {
   pressedId = moved.id;
   save();
   render();
-  document
-    .querySelector(`[data-id="${moved.id}"]`)
-    ?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+  scrollToItem(moved.id);
   setTimeout(() => {
     pressedId = null;
   }, 800);
@@ -435,6 +406,7 @@ function render() {
   }
 
   SECTIONS.forEach(renderLane);
+  renderTracker();
 
   if (focusKey) {
     const target = document.querySelector(`[data-focus-key="${focusKey}"]`);
@@ -564,7 +536,7 @@ function setBusy(busy) {
   button.disabled = busy;
   button.classList.toggle("is-busy", busy);
   button.textContent = t(busy ? "generating" : "generate");
-  $(".work").setAttribute("aria-busy", String(busy));
+  $("#standupView").setAttribute("aria-busy", String(busy));
 }
 
 async function generate() {
@@ -718,6 +690,32 @@ function commitRepos() {
   );
 }
 
+const inStandup = (task) => ISSUE_SECTIONS.some((key) => state.sections[key].some((row) => sameRef(row, task)));
+
+function addToStandup(task) {
+  const lane = STANDUP_LANE[task.status];
+  const row = taskToRow(task, uid());
+  state.sections[lane].push(row);
+  pressedId = row.id;
+  save();
+  render();
+  setTimeout(() => {
+    pressedId = null;
+  }, 800);
+}
+
+function applyView() {
+  const tracker = location.hash === "#tracker";
+  document.body.dataset.view = tracker ? "tracker" : "standup";
+  $("#standupView").hidden = tracker;
+  $(".output").hidden = tracker;
+  $("#trackerView").hidden = !tracker;
+  document.querySelectorAll(".tab").forEach((tab) => {
+    if (tab.getAttribute("href") === (tracker ? "#tracker" : "#standup")) tab.setAttribute("aria-current", "page");
+    else tab.removeAttribute("aria-current");
+  });
+}
+
 function setSettingsOpen(open) {
   $("#settings").hidden = !open;
   $("#settingsToggle").setAttribute("aria-expanded", String(open));
@@ -768,6 +766,24 @@ function init() {
     button.prepend(icon("plus"));
     button.addEventListener("click", () => addRow(section.dataset.section));
   });
+
+  initTracker({
+    state,
+    save,
+    render,
+    uid,
+    today: todayIso,
+    defaultRepo,
+    hasError: (id) => rowErrors.has(id),
+    removeItem,
+    commitRef,
+    titleState,
+    repoSelect,
+    inStandup,
+    addToStandup,
+  });
+  window.addEventListener("hashchange", applyView);
+  applyView();
 
   applyTranslations();
   paintToday();

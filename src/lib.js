@@ -22,6 +22,25 @@ export function advanceRow(row, to) {
     : { ...base, eta: row.eta ?? "" };
 }
 
+export const TRACKER_STATUSES = ["todo", "doing", "review", "blocked", "done"];
+
+export const STANDUP_LANE = { todo: "upcoming", doing: "inProgress", review: "inProgress", blocked: "inProgress", done: "completed" };
+
+export function taskToRow(task, id) {
+  const base = { id, ref: task.ref ?? "", repo: task.repo ?? "", title: task.title ?? "", subtasks: [] };
+  return STANDUP_LANE[task.status] === "completed" ? { ...base, etaFrom: "", etaTo: "" } : { ...base, eta: "" };
+}
+
+export function sameRef(a, b) {
+  const x = parseRef(a.ref, a.repo);
+  const y = parseRef(b.ref, b.repo);
+  return Boolean(x && y) && x.number === y.number && x.repo.toLowerCase() === y.repo.toLowerCase();
+}
+
+export function daysBetween(fromIso, toIso) {
+  return Math.round((Date.parse(toIso) - Date.parse(fromIso)) / 86_400_000);
+}
+
 const NAME = "[\\w.-]+";
 const REPO_RE = new RegExp(`^${NAME}/${NAME}$`);
 const URL_RE = new RegExp(`github\\.com/(${NAME}/${NAME})/(?:issues|pull)/(\\d+)`);

@@ -134,6 +134,28 @@ h1, h2, p { margin: 0; }
 .brand { font: 600 18px/1.2 var(--font-body); }
 .today { color: var(--muted); margin-right: auto; }
 
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+}
+
+.tab {
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font: 600 14px/1.2 var(--font-body);
+  text-decoration: none;
+  transition: background-color 150ms, color 150ms;
+}
+
+.tab:hover { color: var(--ink); }
+.tab[aria-current="page"] { background: var(--field); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.1); }
+
+[data-view="tracker"] .layout { grid-template-columns: minmax(0, 1fr); }
+
 .settings {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -180,6 +202,11 @@ h1, h2, p { margin: 0; }
 .lane[data-section="inProgress"] { --hue: var(--yellow); --hue-text: var(--yellow-text); }
 .lane[data-section="upcoming"] { --hue: var(--blue); --hue-text: var(--blue-text); }
 .lane[data-section="prs"] { --hue: var(--purple); --hue-text: var(--purple-text); }
+.lane[data-status="todo"] { --hue: var(--blue); --hue-text: var(--blue-text); }
+.lane[data-status="doing"] { --hue: var(--yellow); --hue-text: var(--yellow-text); }
+.lane[data-status="review"] { --hue: var(--purple); --hue-text: var(--purple-text); }
+.lane[data-status="blocked"] { --hue: var(--red); --hue-text: var(--red-text); }
+.lane[data-status="done"] { --hue: var(--green); --hue-text: var(--green-text); }
 
 .lane {
   padding: 14px 18px 4px;
@@ -294,6 +321,35 @@ h1, h2, p { margin: 0; }
 .item-note { color: var(--muted); font-size: 13px; }
 
 .item-actions { display: flex; align-items: center; gap: 6px; }
+.item-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.item-pills:empty { display: none; }
+
+.title-input,
+.item-meta .note-input {
+  margin-left: -8px;
+  padding: 0 7px;
+  border-color: transparent;
+  background-color: transparent;
+}
+
+.title-input {
+  width: calc(100% + 8px);
+  min-height: 30px;
+  margin-top: -3px;
+  padding-block: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.35;
+  resize: none;
+  field-sizing: content;
+}
+.note-input { flex: 1 1 220px; }
+
+.title-input:hover,
+.note-input:hover { border-color: var(--rule); }
+
+.title-input:focus,
+.note-input:focus { border-color: var(--muted); background-color: var(--field); outline: none; }
 .item-x { grid-column: 4; grid-row: 1; }
 
 .mark {
@@ -309,6 +365,8 @@ h1, h2, p { margin: 0; }
   line-height: 1;
   white-space: nowrap;
 }
+
+.mark .icon { width: 13px; height: 13px; margin-right: 4px; }
 
 .subtasks { margin-left: 148px; }
 
@@ -417,7 +475,8 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 .item-meta select,
 .subtask select,
-.repo-select {
+.repo-select,
+.pill-select {
   justify-self: start;
   width: auto;
   height: 24px;
@@ -434,7 +493,8 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
   transition: background-color 150ms, color 150ms;
 }
 
-.repo-select:hover { background-color: color-mix(in srgb, var(--muted) 22%, transparent); color: var(--ink); }
+.repo-select:hover,
+.pill-select:hover { background-color: color-mix(in srgb, var(--muted) 22%, transparent); color: var(--ink); }
 
 @supports (appearance: base-select) {
   select,
@@ -678,5 +738,5 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 @media (prefers-reduced-motion: reduce) {
   .is-pressed .item-tape, .generate.is-busy::after { animation: none; }
-  .btn, .btn-text, .generate, .tape, .repo-select { transition: none; }
+  .btn, .btn-text, .generate, .tape, .repo-select, .pill-select, .tab { transition: none; }
 }

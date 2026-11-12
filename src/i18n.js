@@ -1,6 +1,9 @@
 const STRINGS = {
   en: {
     title: "Daily Standup Generator",
+    views: "Views",
+    standupTab: "Standup",
+    trackerTab: "Tracker",
     language: "Language",
     settings: "Settings",
     token: "GitHub token",
@@ -63,9 +66,29 @@ const STRINGS = {
     errNetwork: "Could not reach GitHub. Check your connection.",
     errApi: "GitHub error: {message}",
     errSummary: "{count} item(s) could not be loaded and are missing from the output. They're marked in red.",
+    todo: "To do",
+    doing: "Doing",
+    review: "In review",
+    blocked: "Blocked",
+    done: "Done",
+    status: "Status",
+    countTask: "1 task",
+    countTasks: "{count} tasks",
+    emptyTasks: "No tasks.",
+    addTask: "Add task",
+    taskRef: "Issue or PR number (optional)",
+    taskTitle: "Task, or type an issue number on the left",
+    note: "Add a note",
+    updated: "Updated {when}",
+    clearDone: "Clear done ({count})",
+    addToStandup: "Add to standup",
+    inStandup: "In standup",
   },
   es: {
     title: "Generador de Daily Standup",
+    views: "Vistas",
+    standupTab: "Standup",
+    trackerTab: "Seguimiento",
     language: "Idioma",
     settings: "Configuración",
     token: "Token de GitHub",
@@ -128,6 +151,23 @@ const STRINGS = {
     errNetwork: "No se pudo conectar con GitHub. Revisá tu conexión.",
     errApi: "Error de GitHub: {message}",
     errSummary: "{count} ítem(s) no se pudieron cargar y faltan en el resultado. Están marcados en rojo.",
+    todo: "Por hacer",
+    doing: "Haciendo",
+    review: "En revisión",
+    blocked: "Bloqueado",
+    done: "Hecho",
+    status: "Estado",
+    countTask: "1 tarea",
+    countTasks: "{count} tareas",
+    emptyTasks: "No hay tareas.",
+    addTask: "Agregar tarea",
+    taskRef: "Número de issue o PR (opcional)",
+    taskTitle: "Tarea, o escribí un número de issue a la izquierda",
+    note: "Agregar una nota",
+    updated: "Actualizado {when}",
+    clearDone: "Limpiar hechos ({count})",
+    addToStandup: "Agregar al standup",
+    inStandup: "En el standup",
   },
 };
 
@@ -156,6 +196,9 @@ export function applyTranslations(root = document) {
   });
   root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  root.querySelectorAll("[data-i18n-label]").forEach((el) => {
+    el.setAttribute("aria-label", t(el.dataset.i18nLabel));
   });
   document.title = t("title");
 }

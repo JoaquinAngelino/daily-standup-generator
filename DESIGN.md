@@ -293,6 +293,8 @@ The rhythm is built on 6, 8, 10, 12, 14, 16, 20, 24, 32 and 40px. Rows have 14px
 
 At 960px or below, the layout becomes one column, the output follows the lanes, and the Markdown keeps a minimum height of 320px. At 640px or below, gutters drop to 16px, the number tape narrows to 104px and sits on the first row, actions and meta wrap to full-width rows beneath it, and the subtask indent goes to zero.
 
+The Tracker view (`#tracker`) hides the output panel and uses one column. It reuses the lane cards in a fixed order, each with its own hue: To do (blue), Doing (yellow), In review (purple), Blocked (red), Done (green). A task row has the same grid as a standup row. The pills under the title hold the status (changing it moves the task) and the repo. The actions hold "Add to standup", or an "In standup" mark once the issue is in a standup lane. The meta line holds an inline note and a muted "Updated …" date.
+
 ### Named Rules
 **The One Hairline Rule.** Rows are separated by a single 1px rule, and each lane's list opens with one rule on top. Never box a row or nest a card inside a lane.
 
@@ -336,19 +338,20 @@ The solid near-black tape, with white text and 8px corners, fills the full width
 - **Icon button:** 32px, 6px corners, muted, with no visible border until hover (rule stroke, ink icon).
 
 ### Marks
-A PR review state shows as a neutral chip beside the title: 22px high, 11px radius, 9px side padding, 13px Barlow 500 in sentence case, muted text on muted at 12%. Every state looks the same apart from its words; marks carry no stage colour and no dot. A mark is hidden while the row is in error.
+A PR review state shows as a neutral chip beside the title: 22px high, 11px radius, 9px side padding, 13px Barlow 500 in sentence case, muted text on muted at 12%. Every state looks the same apart from its words; marks carry no stage colour and no dot. A mark is hidden while the row is in error. The tracker's "In standup" mark is the same chip with a 13px check icon before the words.
 
 ### Inputs / Fields
 - **Style:** field background, 1px rule stroke, 6px radius, 36px high (30px in row meta and subtasks), tabular numerals.
 - **Hover:** the stroke darkens to muted.
 - **Focus:** a global 2px ink outline, offset by 2px. The output textarea uses a -2px offset.
 - **Select:** a custom stroked chevron, sized to its content in rows.
-- **Repo select:** a 24px pill (muted at 12%, 12px radius, muted 12.5px/500 text, chevron) whose size never changes; hover deepens the fill to 22% and the text to ink.
+- **Inline text (tracker):** a free-text task title (an auto-growing textarea at title size) and the task note are borderless and transparent. A rule stroke appears on hover; on focus there is a muted stroke on the field background. The text lines up with the titles above.
+- **Repo and status selects:** a 24px pill (muted at 12%, 12px radius, muted 12.5px/500 text, chevron) whose size never changes; hover deepens the fill to 22% and the text to ink.
 - **Select picker:** where `appearance: base-select` is supported, every select opens a styled list below it: field background, 1px rule stroke, 8px radius, soft shadow, 6px-radius options with a muted hover wash and a green-text checkmark. Other browsers keep the native list.
 - **Date:** 108px wide. An empty date is muted. The picker indicator stays hidden until hover or focus.
 
 ### Navigation
-A top bar on panel grey with the app name (Title), today's date in muted, then the Settings outline button and the language select pushed right. A single hairline sits below it. Settings opens a drawer beneath on the same panel grey.
+A top bar on panel grey with the app name (Title), the view tabs, today's date in muted, then the Settings outline button and the language select pushed right. A single hairline sits below it. The view tabs (Standup, Tracker) are hash links in a segmented control: a muted-at-12% track with 3px padding and an 8px radius. The current tab (`aria-current="page"`) is a field-white segment with ink text and a 1px soft shadow, and the other tab is muted text. Settings opens a drawer beneath on the same panel grey.
 
 ### Output panel
 A panel-grey column with a left hairline. The head holds the Output heading and the two copy buttons. Below it come the editable mono Markdown, then the foot with a hint and the Generate tape. Errors appear as a 1px red-text outlined banner with 6px corners, never filled.
