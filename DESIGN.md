@@ -294,9 +294,10 @@ The rhythm is built on 6, 8, 10, 12, 14, 16, 20, 24, 32 and 40px. Rows have 14px
 At 960px or below, the layout becomes one column, the output follows the lanes, and the Markdown keeps a minimum height of 320px. At 640px or below, gutters drop to 16px, the number tape narrows to 104px and sits on the first row, actions and meta wrap to full-width rows beneath it, and the subtask indent goes to zero.
 
 The Tracker view (`#tracker`) hides the output panel and uses one column. A bar above the lanes holds "Sort by" (priority, ETA, or order added) and "Refresh from GitHub". There are three lane cards: Not started (blue), In progress (yellow) and Done (green). A task row uses the same grid as a standup row:
-- **GitHub line under the title:** a state mark with a coloured dot (open green, draft muted, merged purple; closed is purple for an issue and red for a PR), the muted @assignees, and a linked-PR mark for each PR that closes, is connected to or mentions the issue. Open PRs come first. A PR from another repo is labelled with that repo name instead of "PR".
+- **GitHub line under the title:** a state mark with a coloured dot (open green, draft muted, merged purple; closed is purple for an issue and red for a PR), and the muted @assignees, or "by @author" when nobody is assigned.
 - **Pill row:** section, status, priority and repo. A Blocked status is red text on a red wash at 12%.
 - **Actions:** "Add to standup", or the "In standup" mark.
+- **PR list (issues only):** below the row, at the same indent as subtasks. It has one line per PR that closes, is connected to or mentions the issue, with open PRs first. Each line holds a state mark that links to the PR (a PR from another repo is labelled with that repo's name), the title on one line with an ellipsis, the muted people, and a remove ×. It ends with a "+ Add PR" text button that opens a 220px number-or-URL input. On phones each line is a grid: the mark, the people and the × on the first row, and the title below.
 - **Meta line:** the ETA (red text when it is past and the task is not done), an inline note, and the muted "Updated …" date.
 
 On phones, the title block of a tracker row drops below the tape and spans the full width.

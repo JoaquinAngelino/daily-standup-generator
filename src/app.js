@@ -18,6 +18,8 @@ import {
   migrateTask,
   standupLane,
   trackerInfo,
+  prInfo,
+  mergePrs,
   taskToRow,
   sameRef,
 } from "./lib.js";
@@ -474,12 +476,26 @@ const duplicateError = (row, place) => () => t("errDuplicate", { ref: row.ref.tr
 function clearFetched(key, row) {
   row.title = "";
   if (key !== "tracker") delete row.status;
-  else ["kind", "state", "assignees", "prs"].forEach((field) => delete row[field]);
+  else ["kind", "state", "assignees", "author", "prs"].forEach((field) => delete row[field]);
 }
 
-function fetchFor(key, client, ref) {
+async function fetchTracker(client, ref, task) {
+  const info = trackerInfo(await client.item(ref));
+  if (info.kind !== "issue") return info;
+  const added = await Promise.all(
+    (task.addedPrs ?? []).map((r) =>
+      client.item(r).then(
+        (node) => (node.__typename === "PullRequest" ? prInfo(node, r.repo) : null),
+        () => ({ ...r, url: `https://github.com/${r.repo}/pull/${r.number}`, state: "", title: "" }),
+      ),
+    ),
+  );
+  return { ...info, prs: mergePrs(info.prs, added.filter(Boolean), task.hiddenPrs) };
+}
+
+function fetchFor(key, client, ref, row) {
   if (key === "prs") return client.pull(ref);
-  return key === "tracker" ? client.item(ref) : client.issue(ref);
+  return key === "tracker" ? fetchTracker(client, ref, row) : client.issue(ref);
 }
 
 async function commitRef(key, row) {
@@ -509,9 +525,9 @@ async function commitRef(key, row) {
   row.fetching = true;
   render();
   try {
-    const item = await fetchFor(key, createClient(token), ref);
+    const item = await fetchFor(key, createClient(token), ref, row);
     if (row.ref === String(ref.number) && row.repo === ref.repo) {
-      if (key === "tracker") Object.assign(row, trackerInfo(item));
+      if (key === "tracker") Object.assign(row, item);
       else row.title = item.title;
       if (key === "prs") row.status = reviewStatus(item);
     }
@@ -828,6 +844,8 @@ function init() {
     titleState,
     dateInput,
     metaGroup,
+    client: () => (getToken() ? createClient(getToken()) : null),
+    describeError,
     repoSelect,
     inStandup,
     addToStandup,

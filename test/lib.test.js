@@ -18,6 +18,7 @@ import {
   migrateTask,
   sortTasks,
   trackerInfo,
+  mergePrs,
 } from "../src/lib.js";
 
 test("advanceRow maps ETAs onto the next stage and drops stage-only state", () => {
@@ -160,34 +161,42 @@ test("sortTasks orders by priority then ETA, or ETA then priority, empties last"
   assert.equal(ids(sortTasks([a, b, c, d], "manual")), "abcd");
 });
 
-test("trackerInfo reads state, assignees and linked PRs", () => {
+test("trackerInfo reads state, people and related PRs, deduped and open first", () => {
+  const pr = (number, state, repo, extra = {}) => ({ number, url: `${repo}/${number}`, state, title: `P${number}`, repository: { nameWithOwner: repo }, author: { login: "joe" }, ...extra });
   assert.deepEqual(
     trackerInfo({
       __typename: "Issue", title: "T", state: "OPEN",
       assignees: { nodes: [{ login: "ana" }] },
-      closedByPullRequestsReferences: { nodes: [{ number: 8, url: "v", state: "MERGED", repository: { nameWithOwner: "o/r" } }] },
+      closedByPullRequestsReferences: { nodes: [pr(8, "MERGED", "o/r")] },
       timelineItems: {
         nodes: [
           { source: {} },
-          { source: { number: 8, url: "v", state: "MERGED", repository: { nameWithOwner: "o/r" } } },
-          { source: { number: 8, url: "w", state: "CLOSED", repository: { nameWithOwner: "o/other" } } },
-          { subject: { number: 9, url: "u", state: "OPEN", isDraft: true, repository: { nameWithOwner: "o/r" } } },
+          { source: pr(8, "MERGED", "o/r") },
+          { source: pr(8, "CLOSED", "o/other") },
+          { subject: pr(9, "OPEN", "o/r", { isDraft: true, assignees: { nodes: [{ login: "leo" }] } }) },
         ],
       },
     }),
     {
-      kind: "issue", title: "T", state: "open", assignees: ["ana"],
+      kind: "issue", title: "T", state: "open", assignees: ["ana"], author: "",
       prs: [
-        { number: 9, url: "u", repo: "o/r", state: "draft" },
-        { number: 8, url: "v", repo: "o/r", state: "merged" },
-        { number: 8, url: "w", repo: "o/other", state: "closed" },
+        { number: 9, url: "o/r/9", repo: "o/r", title: "P9", state: "draft", assignees: ["leo"], author: "joe" },
+        { number: 8, url: "o/r/8", repo: "o/r", title: "P8", state: "merged", assignees: [], author: "joe" },
+        { number: 8, url: "o/other/8", repo: "o/other", title: "P8", state: "closed", assignees: [], author: "joe" },
       ],
     },
   );
   assert.deepEqual(
-    trackerInfo({ __typename: "PullRequest", title: "P", state: "CLOSED", isDraft: false, assignees: { nodes: [] } }),
-    { kind: "pr", title: "P", state: "closed", assignees: [], prs: [] },
+    trackerInfo({ __typename: "PullRequest", title: "P", state: "CLOSED", isDraft: false, author: { login: "joe" }, assignees: { nodes: [] } }),
+    { kind: "pr", title: "P", state: "closed", assignees: [], author: "joe", prs: [] },
   );
+});
+
+test("mergePrs adds manual PRs and drops hidden ones", () => {
+  const a = { repo: "o/r", number: 1, state: "merged" };
+  const b = { repo: "O/R", number: 2, state: "open" };
+  const c = { repo: "o/r", number: 3, state: "" };
+  assert.deepEqual(mergePrs([a, b], [c], ["o/r#2"]), [a, c]);
 });
 
 test("sameRef matches number and repo, ignoring repo case and ref form", () => {

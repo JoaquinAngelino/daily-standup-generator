@@ -73,19 +73,30 @@ export function itemState(node) {
 
 const PR_ORDER = { open: 0, draft: 0, merged: 1, closed: 2 };
 
-// Closing links, manual Development links and PRs that mention the issue; open ones first.
+export const prKey = (pr) => `${pr.repo}#${pr.number}`.toLowerCase();
+
+const people = (node) => ({ assignees: (node.assignees?.nodes ?? []).map((a) => a.login), author: node.author?.login ?? "" });
+
+export function prInfo(node, repo = "") {
+  const state = itemState(node);
+  return { number: node.number, url: node.url, repo: node.repository?.nameWithOwner ?? repo, title: node.title ?? "", state, ...people(node) };
+}
+
+// Dedupes by repo and number, drops hidden keys, open PRs first.
+export function mergePrs(detected, added = [], hidden = []) {
+  const hide = new Set(hidden);
+  const prs = new Map();
+  for (const pr of [...detected, ...added]) if (!hide.has(prKey(pr))) prs.set(prKey(pr), pr);
+  return [...prs.values()].sort((a, b) => (PR_ORDER[a.state] ?? 3) - (PR_ORDER[b.state] ?? 3));
+}
+
+// Closing links, manual Development links and PRs that mention the issue.
 function linkedPrs(node) {
   const candidates = [
     ...(node.closedByPullRequestsReferences?.nodes ?? []),
     ...(node.timelineItems?.nodes ?? []).map((event) => event.source ?? event.subject),
   ];
-  const prs = new Map();
-  for (const pr of candidates) {
-    if (!pr?.number || !pr.url) continue;
-    const repo = pr.repository?.nameWithOwner ?? "";
-    prs.set(`${repo}#${pr.number}`.toLowerCase(), { number: pr.number, url: pr.url, repo, state: itemState(pr) });
-  }
-  return [...prs.values()].sort((a, b) => PR_ORDER[a.state] - PR_ORDER[b.state]);
+  return mergePrs(candidates.filter((pr) => pr?.number && pr.url).map((pr) => prInfo(pr)));
 }
 
 // `node` is the issueOrPullRequest shape requested in github.js.
@@ -95,7 +106,7 @@ export function trackerInfo(node) {
     kind,
     title: node.title,
     state: itemState(node),
-    assignees: (node.assignees?.nodes ?? []).map((a) => a.login),
+    ...people(node),
     prs: kind === "issue" ? linkedPrs(node) : [],
   };
 }

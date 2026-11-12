@@ -209,7 +209,15 @@ h1, h2, p { margin: 0; }
 .tracker-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-bottom: -8px; }
 
 .gh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; }
-.gh-people { color: var(--muted); font-size: 13px; }
+.gh-people { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+.pr-list { display: grid; gap: 2px; margin-left: 148px; }
+.pr-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pr-row .mark-link { flex: none; }
+.pr-title { flex: 1 1 auto; min-width: 0; overflow: hidden; font-size: 13.5px; text-overflow: ellipsis; white-space: nowrap; }
+.pr-row .icon-btn { flex: none; width: 28px; height: 28px; }
+.pr-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 30px; }
+.pr-input { width: 220px; height: 30px; font-size: 13.5px; }
 
 .lane {
   padding: 14px 18px 4px;
@@ -750,6 +758,11 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
   #trackerView .item-actions { grid-column: 2; grid-row: 1; justify-content: flex-end; }
   #trackerView .item-body { grid-column: 1 / -1; grid-row: 2; }
   #trackerView .item-meta { grid-row: 3; }
+  .pr-list { margin-left: 0; gap: 8px; }
+  .pr-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; }
+  .pr-row .gh-people { grid-column: 2; grid-row: 1; overflow: hidden; text-overflow: ellipsis; }
+  .pr-row .icon-btn { grid-column: 3; grid-row: 1; }
+  .pr-title { grid-column: 1 / -1; grid-row: 2; }
   .output-head, .output-foot { padding-left: 16px; padding-right: 16px; }
 }
 

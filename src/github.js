@@ -27,13 +27,20 @@ const ITEM_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
       }
       ... on PullRequest {
         number title url state isDraft
+        author { login }
+        repository { nameWithOwner }
         assignees(first: 10) { nodes { login } }
       }
     }
   }
 }
 
-fragment LinkedPr on PullRequest { number url state isDraft repository { nameWithOwner } }`;
+fragment LinkedPr on PullRequest {
+  number title url state isDraft
+  author { login }
+  repository { nameWithOwner }
+  assignees(first: 5) { nodes { login } }
+}`;
 
 export class GitHubError extends Error {
   constructor(message, status) {

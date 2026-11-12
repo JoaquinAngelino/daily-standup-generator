@@ -1,4 +1,4 @@
-import { TRACKER_STAGES, TASK_FLAGS, PRIORITIES, parseRef, daysBetween, sortTasks } from "./lib.js";
+import { TRACKER_STAGES, TASK_FLAGS, PRIORITIES, parseRef, daysBetween, sortTasks, prKey, prInfo, mergePrs } from "./lib.js";
 import { t, getLanguage } from "./i18n.js";
 import { el, icon, iconButton, scrollToItem } from "./ui.js";
 
@@ -10,6 +10,8 @@ const PRIORITY_LABEL = { "": "priorityNone" };
 let ctx;
 let movedId = null;
 let refreshing = false;
+let addingPrFor = null;
+const prErrors = new Map();
 
 export function initTracker(context) {
   ctx = context;
@@ -89,22 +91,112 @@ function pill(task, field, values, labelKey, label, onchange) {
 }
 
 function stateMark(kind, state, text) {
-  const tone = state === "closed" ? (kind === "pr" ? "red" : "purple") : STATE_TONE[state];
+  const tone = state === "closed" ? (kind === "pr" ? "red" : "purple") : STATE_TONE[state] ?? "muted";
   return [el("span", { class: `swatch swatch--${tone}`, "aria-hidden": "true" }), el("span", { textContent: text })];
+}
+
+// PR assignees are rarely set, so the author stands in.
+function peopleText(item) {
+  if (item.assignees?.length) return item.assignees.map((login) => `@${login}`).join(", ");
+  return item.author ? t("byAuthor", { login: item.author }) : t("unassigned");
 }
 
 function githubLine(task) {
   if (!task.state || task.fetching || ctx.hasError(task.id)) return null;
   const stateText = t(`state_${task.state}`);
-  const people = task.assignees?.length ? task.assignees.map((login) => `@${login}`).join(", ") : t("unassigned");
   return el("p", { class: "gh-line" }, [
     el("span", { class: "mark" }, stateMark(task.kind, task.state, task.kind === "pr" ? `PR · ${stateText}` : stateText)),
-    el("span", { class: "gh-people", textContent: people }),
-    ...(task.prs ?? []).map((pr) => {
-      const where = pr.repo && pr.repo.toLowerCase() !== task.repo?.toLowerCase() ? pr.repo.split("/")[1] : "PR ";
-      return el("a", { class: "mark mark-link", href: pr.url, target: "_blank", rel: "noopener" },
-        stateMark("pr", pr.state, `${where}#${pr.number} · ${t(`state_${pr.state}`)}`));
-    }),
+    el("span", { class: "gh-people", textContent: peopleText(task) }),
+  ]);
+}
+
+function prRow(task, pr) {
+  const where = pr.repo && pr.repo.toLowerCase() !== task.repo?.toLowerCase() ? pr.repo.split("/")[1] : "PR ";
+  const label = `${where}#${pr.number}`;
+  return el("div", { class: "pr-row" }, [
+    el("a", { class: "mark mark-link", href: pr.url, target: "_blank", rel: "noopener" },
+      stateMark("pr", pr.state, pr.state ? `${label} · ${t(`state_${pr.state}`)}` : label)),
+    el("span", { class: "pr-title", textContent: pr.title ?? "", title: pr.title ?? "" }),
+    pr.state ? el("span", { class: "gh-people", textContent: peopleText(pr) }) : null,
+    iconButton("x", t("remove"), () => removePr(task, pr)),
+  ]);
+}
+
+function removePr(task, pr) {
+  const key = prKey(pr);
+  task.prs = (task.prs ?? []).filter((p) => prKey(p) !== key);
+  task.addedPrs = (task.addedPrs ?? []).filter((r) => prKey(r) !== key);
+  task.hiddenPrs = [...new Set([...(task.hiddenPrs ?? []), key])];
+  ctx.save();
+  ctx.render();
+}
+
+async function addPr(task, value) {
+  const ref = parseRef(value, task.repo);
+  if (!ref) {
+    prErrors.set(task.id, () => t("errBadRef"));
+    return ctx.render();
+  }
+  const key = prKey(ref);
+  addingPrFor = null;
+  prErrors.delete(task.id);
+  task.hiddenPrs = (task.hiddenPrs ?? []).filter((k) => k !== key);
+  if (!(task.addedPrs ?? []).some((r) => prKey(r) === key)) task.addedPrs = [...(task.addedPrs ?? []), ref];
+  const placeholder = { ...ref, url: `https://github.com/${ref.repo}/pull/${ref.number}`, state: "", title: "" };
+  if (!(task.prs ?? []).some((p) => prKey(p) === key)) task.prs = [...(task.prs ?? []), placeholder];
+  ctx.save();
+  ctx.render();
+
+  const client = ctx.client();
+  if (!client) return;
+  try {
+    const node = await client.item(ref);
+    if (node.__typename !== "PullRequest") throw new Error(t("errNotPr", { ref: `#${ref.number}` }));
+    task.prs = mergePrs(task.prs.filter((p) => prKey(p) !== key), [prInfo(node, ref.repo)]);
+  } catch (err) {
+    task.prs = task.prs.filter((p) => prKey(p) !== key);
+    task.addedPrs = task.addedPrs.filter((r) => prKey(r) !== key);
+    prErrors.set(task.id, () => ctx.describeError(err, `#${ref.number}`));
+  }
+  ctx.save();
+  ctx.render();
+}
+
+function openPrInput(task) {
+  addingPrFor = task.id;
+  prErrors.delete(task.id);
+  ctx.render();
+  document.querySelector(`[data-id="${task.id}"] .pr-input`)?.focus();
+}
+
+function prList(task) {
+  if (task.kind === "pr" || !parseRef(task.ref, task.repo) || ctx.hasError(task.id)) return null;
+  const error = prErrors.get(task.id);
+  const add = addingPrFor === task.id
+    ? el("input", {
+      class: "pr-input",
+      placeholder: t("prRef"),
+      "aria-label": t("prRef"),
+      spellcheck: false,
+      autocomplete: "off",
+      "data-focus-key": `${task.id}:addPr`,
+      onkeydown: (e) => {
+        if (e.key === "Escape") {
+          addingPrFor = null;
+          ctx.render();
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          addPr(task, e.target.value);
+        }
+      },
+    })
+    : el("button", { type: "button", class: "btn-text btn-small", onclick: () => openPrInput(task) }, [
+      icon("plus"),
+      el("span", { textContent: t("addPr") }),
+    ]);
+  return el("div", { class: "pr-list" }, [
+    ...(task.prs ?? []).map((pr) => prRow(task, pr)),
+    el("div", { class: "pr-foot" }, [add, error ? el("span", { class: "status", "data-tone": "error", textContent: error() }) : null]),
   ]);
 }
 
@@ -206,6 +298,7 @@ function renderTask(task) {
         task.updated ? el("span", { class: "meta-label", textContent: t("updated", { when: ago(task.updated) }) }) : null,
       ]),
     ]),
+    prList(task),
   ]);
 }
 
