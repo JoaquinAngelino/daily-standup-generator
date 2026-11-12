@@ -298,8 +298,8 @@ The Tracker view (`#tracker`) hides the output panel and uses one column up to 1
 - **Meta line:** one wrapping line holding:
   - the pills: section, status, priority and repo (a Blocked status is red text on a red wash at 12%);
   - the ETA chip (see Inputs);
-  - the labelled note field (see Inputs), which takes the remaining width;
   - the muted "Updated …" date.
+- **Note:** its own row under the meta line, full width (see Inputs).
 - **Actions:** "Add to standup", or the "In standup" mark.
 - **PR list (issues only):** below the row, at the same indent as subtasks. It has one line per PR that closes, is connected to or mentions the issue, with open PRs first. Each line holds a state mark that links to the PR (a PR from another repo is labelled with that repo's name), the title on one line with an ellipsis, the muted reviewers, and a remove ×. It ends with a "+ Add PR" text button that opens a 220px number-or-URL input. On phones each line is a grid: the mark, the people and the × on the first row, and the title below.
 
@@ -359,7 +359,7 @@ A PR review state shows as a neutral chip beside the title: 22px high, 11px radi
 - **Select:** a custom stroked chevron, sized to its content in rows.
 - **Inline text (tracker):** a free-text task title is an auto-growing textarea at title size, borderless and transparent. A rule stroke appears on hover; on focus there is a muted stroke on the field background. The text lines up with the titles above.
 - **ETA chip (tracker):** a 30px chip with a 6px radius on a muted 14% wash. It holds a calendar icon, a small uppercase "ETA" label, the short date in 600 weight and, while the task is not done, the muted relative day ("in 2 days", "tomorrow", "3 days ago"). Due today or tomorrow, the wash is yellow at 28% and the icon and relative day are yellow-text. Late, the wash is red at 14% and the text is red-text. Without a date it is a dashed "Set ETA" chip. A transparent date input covers the chip and opens the native picker.
-- **Note (tracker):** a "Note" label, then a field with a light rule stroke on a half-transparent field background. Once it holds text, the stroke goes and it becomes a muted 14% wash with 500-weight text, so a written note stands out from an empty one.
+- **Note (tracker):** a callout on its own row: a 3px left bar on a muted 7% wash, holding a borderless textarea that grows with its text and keeps line breaks. Empty, it is a slim row with the "Add a note" placeholder. With text, a small uppercase "Note" label sits above 15px ink text, the bar turns ink and the wash deepens to 12%.
 - **Repo and status selects:** a 24px pill (muted at 12%, 12px radius, muted 12.5px/500 text, chevron) whose size never changes; hover deepens the fill to 22% and the text to ink.
 - **Select picker:** where `appearance: base-select` is supported, every select opens a styled list below it: field background, 1px rule stroke, 8px radius, soft shadow, 6px-radius options with a muted hover wash and a green-text checkmark. Other browsers keep the native list.
 - **Date:** 108px wide. An empty date is muted. The picker indicator stays hidden until hover or focus.

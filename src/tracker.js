@@ -265,22 +265,6 @@ function titleControl(task) {
   return input;
 }
 
-function textInput(task, field, labelKey, className) {
-  const input = el("input", {
-    class: className,
-    value: task[field] ?? "",
-    placeholder: t(labelKey),
-    "aria-label": t(labelKey),
-    spellcheck: false,
-    "data-focus-key": `${task.id}:${field}`,
-    oninput: () => {
-      task[field] = input.value;
-      ctx.save();
-    },
-  });
-  return input;
-}
-
 function etaChip(task) {
   const input = el("input", {
     type: "date",
@@ -320,9 +304,25 @@ function etaChip(task) {
 }
 
 function noteField(task) {
-  const input = textInput(task, "note", "note", `note-input${task.note ? " has-text" : ""}`);
-  input.addEventListener("input", () => input.classList.toggle("has-text", Boolean(input.value)));
-  return el("label", { class: "meta-group note-group" }, [el("span", { class: "meta-label", textContent: t("noteLabel") }), input]);
+  const input = el("textarea", {
+    class: "note-input",
+    rows: 1,
+    value: task.note ?? "",
+    placeholder: t("note"),
+    "aria-label": t("noteLabel"),
+    spellcheck: false,
+    "data-focus-key": `${task.id}:note`,
+    oninput: () => {
+      task.note = input.value;
+      box.classList.toggle("has-text", Boolean(input.value.trim()));
+      ctx.save();
+    },
+  });
+  const box = el("label", { class: `item-note-box${task.note?.trim() ? " has-text" : ""}` }, [
+    el("span", { class: "note-label", textContent: t("noteLabel") }),
+    input,
+  ]);
+  return box;
 }
 
 function renderTask(task) {
@@ -371,9 +371,9 @@ function renderTask(task) {
           ctx.repoSelect("tracker", task),
         ]),
         etaChip(task),
-        noteField(task),
         task.updated ? el("span", { class: "meta-label", textContent: t("updated", { when: ago(task.updated) }) }) : null,
       ]),
+      noteField(task),
     ]),
     prList(task),
   ]);

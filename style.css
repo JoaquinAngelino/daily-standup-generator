@@ -395,7 +395,6 @@ body:has(.is-dragging) { cursor: grabbing; user-select: none; }
   resize: none;
   field-sizing: content;
 }
-.note-group { flex: 1 1 320px; }
 
 .eta-chip {
   position: relative;
@@ -450,23 +449,45 @@ body:has(.is-dragging) { cursor: grabbing; user-select: none; }
 
 .eta-chip .eta-picker::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; cursor: pointer; }
 
-.item-meta .note-input {
-  flex: 1;
-  border-color: color-mix(in srgb, var(--muted) 30%, transparent);
-  background-color: color-mix(in srgb, var(--field) 50%, transparent);
+.title-input:hover { border-color: var(--muted); }
+.title-input:focus { border-color: var(--muted); background-color: var(--field); outline: none; }
+
+.item-note-box {
+  grid-column: 2 / -1;
+  grid-row: 3;
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px 6px;
+  border-left: 3px solid color-mix(in srgb, var(--muted) 35%, transparent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in srgb, var(--muted) 7%, transparent);
+  cursor: text;
+  transition: background-color 150ms, border-color 150ms;
 }
 
-.item-meta .note-input.has-text {
-  border-color: transparent;
-  background-color: color-mix(in srgb, var(--muted) 14%, transparent);
-  font-weight: 500;
+.note-label { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.item-note-box .note-input {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.45;
+  resize: none;
+  field-sizing: content;
 }
 
-.title-input:hover,
-.item-meta .note-input:hover { border-color: var(--muted); }
+.item-note-box .note-input:focus { outline: none; }
+.item-note-box:hover { border-left-color: var(--muted); }
+.item-note-box:focus-within { border-left-color: var(--ink); background: color-mix(in srgb, var(--muted) 11%, transparent); }
+.item-note-box.has-text { border-left-color: var(--ink); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+.item-note-box:not(.has-text):not(:focus-within) { padding-block: 6px; }
+.item-note-box:not(.has-text):not(:focus-within) .note-label { display: none; }
+.item-note-box:not(.has-text) .note-input { font-size: 14px; }
 
-.title-input:focus,
-.item-meta .note-input:focus { border-color: var(--muted); background-color: var(--field); outline: none; }
 .item-x { grid-column: 4; grid-row: 1; }
 
 .mark {
@@ -864,6 +885,7 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
   #trackerView .item-actions { grid-column: 2; grid-row: 1; justify-content: flex-end; }
   #trackerView .item-body { grid-column: 1 / -1; grid-row: 2; }
   #trackerView .item-meta { grid-row: 3; }
+  .item-note-box { grid-column: 1 / -1; grid-row: 4; }
   .pr-list { margin-left: 0; gap: 8px; }
   .pr-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; }
   .pr-row .gh-people { grid-column: 2; grid-row: 1; overflow: hidden; text-overflow: ellipsis; }
@@ -874,5 +896,5 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 @media (prefers-reduced-motion: reduce) {
   .is-pressed .item-tape, .generate.is-busy::after { animation: none; }
-  .btn, .btn-text, .generate, .tape, .repo-select, .pill-select, .tab, .drag-handle, .eta-chip { transition: none; }
+  .btn, .btn-text, .generate, .tape, .repo-select, .pill-select, .tab, .drag-handle, .eta-chip, .item-note-box { transition: none; }
 }
