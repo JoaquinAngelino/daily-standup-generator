@@ -14,15 +14,17 @@ import {
   toMarkdown,
   markdownToHtml,
   markdownToSlackText,
-  TRACKER_STATUSES,
-  STANDUP_LANE,
+  TRACKER_STAGES,
+  migrateTask,
+  standupLane,
+  trackerInfo,
   taskToRow,
   sameRef,
 } from "./lib.js";
 import { createClient, GitHubError } from "./github.js";
 import { t, setLanguage, getLanguage, applyTranslations } from "./i18n.js";
 import { TONE, $, reducedMotion, el, icon, iconButton, scrollToItem } from "./ui.js";
-import { initTracker, renderTracker } from "./tracker.js";
+import { initTracker, renderTracker, refreshTracker } from "./tracker.js";
 
 const STATE_KEY = "dsg.state.v1";
 const TOKEN_KEY = "dsg.token";
@@ -92,16 +94,17 @@ function loadState() {
     sections[key] = Array.isArray(rows) ? rows.filter((r) => r && typeof r === "object") : [];
     sections[key].forEach((r) => delete r.fetching);
   }
-  const tracker = Array.isArray(saved.tracker) ? saved.tracker.filter((r) => r && typeof r === "object") : [];
-  tracker.forEach((r) => {
-    delete r.fetching;
-    if (!TRACKER_STATUSES.includes(r.status)) r.status = "todo";
-  });
+  const tracker = (Array.isArray(saved.tracker) ? saved.tracker : [])
+    .filter((r) => r && typeof r === "object")
+    .map(migrateTask);
+  tracker.forEach((r) => delete r.fetching);
   return {
     repos: Array.isArray(saved.repos) ? saved.repos : [],
     output: typeof saved.output === "string" ? saved.output : "",
     sections,
     tracker,
+    trackerSort: ["priority", "eta", "manual"].includes(saved.trackerSort) ? saved.trackerSort : "priority",
+    outputOpen: saved.outputOpen !== false,
   };
 }
 
@@ -454,7 +457,7 @@ function describeError(err, ref = "") {
 // Issues may appear once across the standup issue lanes, PRs once in PR Review, tasks once in the tracker.
 function duplicatePlace(key, row, earlierOnly = false) {
   const pools = key === "tracker"
-    ? TRACKER_STATUSES.map((s) => [s, state.tracker.filter((task) => task.status === s)])
+    ? TRACKER_STAGES.map((s) => [s, state.tracker.filter((task) => task.stage === s)])
     : (key === "prs" ? ["prs"] : ISSUE_SECTIONS).map((k) => [k, state.sections[k]]);
   for (const [place, list] of pools) {
     for (const other of list) {
@@ -468,15 +471,23 @@ function duplicatePlace(key, row, earlierOnly = false) {
 
 const duplicateError = (row, place) => () => t("errDuplicate", { ref: row.ref.trim(), place: t(place) });
 
+function clearFetched(key, row) {
+  row.title = "";
+  if (key !== "tracker") delete row.status;
+  else ["kind", "state", "assignees", "prs"].forEach((field) => delete row[field]);
+}
+
+function fetchFor(key, client, ref) {
+  if (key === "prs") return client.pull(ref);
+  return key === "tracker" ? client.item(ref) : client.issue(ref);
+}
+
 async function commitRef(key, row) {
   const raw = (row.ref ?? "").trim();
   const ref = parseRef(raw, row.repo);
   rowErrors.delete(row.id);
   delete row.reportedOn;
-  if (!raw) {
-    row.title = "";
-    delete row.status;
-  }
+  if (!raw) clearFetched(key, row);
   if (ref) {
     row.ref = String(ref.number);
     row.repo = ref.repo;
@@ -498,15 +509,14 @@ async function commitRef(key, row) {
   row.fetching = true;
   render();
   try {
-    const client = createClient(token);
-    const item = key === "prs" ? await client.pull(ref) : await client.issue(ref);
+    const item = await fetchFor(key, createClient(token), ref);
     if (row.ref === String(ref.number) && row.repo === ref.repo) {
-      row.title = item.title;
+      if (key === "tracker") Object.assign(row, trackerInfo(item));
+      else row.title = item.title;
       if (key === "prs") row.status = reviewStatus(item);
     }
   } catch (err) {
-    row.title = "";
-    delete row.status;
+    clearFetched(key, row);
     rowErrors.set(row.id, () => describeError(err, raw));
   } finally {
     delete row.fetching;
@@ -715,10 +725,13 @@ function commitRepos() {
   );
 }
 
-const inStandup = (task) => ISSUE_SECTIONS.some((key) => state.sections[key].some((row) => sameRef(row, task)));
+let trackerRefreshed = false;
+
+const inStandup = (task) =>
+  (task.kind === "pr" ? ["prs"] : ISSUE_SECTIONS).some((key) => state.sections[key].some((row) => sameRef(row, task)));
 
 function addToStandup(task) {
-  const lane = STANDUP_LANE[task.status];
+  const lane = standupLane(task);
   const row = taskToRow(task, uid());
   state.sections[lane].push(row);
   pressedId = row.id;
@@ -731,10 +744,15 @@ function addToStandup(task) {
 
 function applyView() {
   const tracker = location.hash === "#tracker";
-  document.body.dataset.view = tracker ? "tracker" : "standup";
   $("#standupView").hidden = tracker;
-  $(".output").hidden = tracker;
+  $("#outputPanel").hidden = tracker || !state.outputOpen;
+  $("#outputToggle").hidden = tracker;
+  $("#outputToggle").setAttribute("aria-expanded", String(state.outputOpen));
   $("#trackerView").hidden = !tracker;
+  if (tracker && !trackerRefreshed && getToken()) {
+    trackerRefreshed = true;
+    refreshTracker();
+  }
   document.querySelectorAll(".tab").forEach((tab) => {
     if (tab.getAttribute("href") === (tracker ? "#tracker" : "#standup")) tab.setAttribute("aria-current", "page");
     else tab.removeAttribute("aria-current");
@@ -770,6 +788,11 @@ function init() {
   setSettingsOpen(!getToken() || !state.repos.length);
 
   $("#settingsToggle").addEventListener("click", () => setSettingsOpen($("#settings").hidden));
+  $("#outputToggle").addEventListener("click", () => {
+    state.outputOpen = !state.outputOpen;
+    save();
+    applyView();
+  });
   $("#language").addEventListener("change", (e) => changeLanguage(e.target.value));
   $("#token").addEventListener("change", saveToken);
   $("#token").addEventListener("keydown", (e) => {
@@ -803,6 +826,8 @@ function init() {
     removeItem,
     commitRef,
     titleState,
+    dateInput,
+    metaGroup,
     repoSelect,
     inStandup,
     addToStandup,

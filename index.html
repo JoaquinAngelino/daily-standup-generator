@@ -21,6 +21,7 @@
         </nav>
         <span id="today" class="today"></span>
         <button id="settingsToggle" type="button" class="btn" aria-expanded="false" aria-controls="settings" data-i18n="settings">Settings</button>
+        <button id="outputToggle" type="button" class="btn" aria-expanded="true" aria-controls="outputPanel" data-i18n="output">Output</button>
         <label class="sr-only" for="language" data-i18n="language">Language</label>
         <select id="language" class="lang">
           <option value="en">English</option>
@@ -99,7 +100,7 @@
       <main id="trackerView" class="work" hidden></main>
     </div>
 
-    <aside class="output" aria-labelledby="output-title">
+    <aside id="outputPanel" class="output" aria-labelledby="output-title">
       <div class="output-head">
         <h2 id="output-title" data-i18n="output">Output</h2>
         <span id="copyStatus" class="status" role="status"></span>

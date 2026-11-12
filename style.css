@@ -154,7 +154,7 @@ h1, h2, p { margin: 0; }
 .tab:hover { color: var(--ink); }
 .tab[aria-current="page"] { background: var(--field); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.1); }
 
-[data-view="tracker"] .layout { grid-template-columns: minmax(0, 1fr); }
+.layout:has(> .output[hidden]) { grid-template-columns: minmax(0, 1fr); }
 
 .settings {
   display: grid;
@@ -202,11 +202,14 @@ h1, h2, p { margin: 0; }
 .lane[data-section="inProgress"] { --hue: var(--yellow); --hue-text: var(--yellow-text); }
 .lane[data-section="upcoming"] { --hue: var(--blue); --hue-text: var(--blue-text); }
 .lane[data-section="prs"] { --hue: var(--purple); --hue-text: var(--purple-text); }
-.lane[data-status="todo"] { --hue: var(--blue); --hue-text: var(--blue-text); }
-.lane[data-status="doing"] { --hue: var(--yellow); --hue-text: var(--yellow-text); }
-.lane[data-status="review"] { --hue: var(--purple); --hue-text: var(--purple-text); }
-.lane[data-status="blocked"] { --hue: var(--red); --hue-text: var(--red-text); }
-.lane[data-status="done"] { --hue: var(--green); --hue-text: var(--green-text); }
+.lane[data-stage="notStarted"] { --hue: var(--blue); --hue-text: var(--blue-text); }
+.lane[data-stage="inProgress"] { --hue: var(--yellow); --hue-text: var(--yellow-text); }
+.lane[data-stage="done"] { --hue: var(--green); --hue-text: var(--green-text); }
+
+.tracker-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-bottom: -8px; }
+
+.gh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; }
+.gh-people { color: var(--muted); font-size: 13px; }
 
 .lane {
   padding: 14px 18px 4px;
@@ -367,6 +370,9 @@ h1, h2, p { margin: 0; }
 }
 
 .mark .icon { width: 13px; height: 13px; margin-right: 4px; }
+.mark .swatch { margin-right: 6px; }
+.mark-link { text-decoration: none; }
+.mark-link:hover { color: var(--ink); background: color-mix(in srgb, var(--muted) 20%, transparent); }
 
 .subtasks { margin-left: 148px; }
 
@@ -471,6 +477,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; cursor: poin
 input[type="date"]:hover::-webkit-calendar-picker-indicator,
 input[type="date"]:focus::-webkit-calendar-picker-indicator { opacity: 0.6; }
 input[type="date"].is-empty:not(:focus) { color: var(--muted); }
+input[type="date"].is-overdue { color: var(--red-text); }
 input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; }
 
 .item-meta select,
@@ -492,6 +499,9 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
   cursor: pointer;
   transition: background-color 150ms, color 150ms;
 }
+
+.pill-select.is-set { color: var(--ink); }
+.pill-select.is-blocked { color: var(--red-text); background-color: color-mix(in srgb, var(--red) 12%, transparent); }
 
 .repo-select:hover,
 .pill-select:hover { background-color: color-mix(in srgb, var(--muted) 22%, transparent); color: var(--ink); }
@@ -570,6 +580,7 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 }
 
 .btn-text:hover { text-decoration-color: currentColor; }
+.btn-text:disabled { cursor: progress; opacity: 0.6; }
 .btn-small { font-size: 13px; color: var(--muted); }
 .btn-small:hover { color: var(--ink); }
 
@@ -608,6 +619,9 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 
 .swatch--yellow { --tape: var(--yellow); }
 .swatch--green { --tape: var(--green); }
+.swatch--purple { --tape: var(--purple); }
+.swatch--red { --tape: var(--red); }
+.swatch--muted { --tape: var(--muted); }
 
 .row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 
@@ -733,6 +747,9 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
   .item-actions { grid-column: 1 / -1; grid-row: 2; }
   .item-meta { grid-column: 1 / -1; grid-row: 3; }
   .subtasks { margin-left: 0; }
+  #trackerView .item-actions { grid-column: 2; grid-row: 1; justify-content: flex-end; }
+  #trackerView .item-body { grid-column: 1 / -1; grid-row: 2; }
+  #trackerView .item-meta { grid-row: 3; }
   .output-head, .output-foot { padding-left: 16px; padding-right: 16px; }
 }
 

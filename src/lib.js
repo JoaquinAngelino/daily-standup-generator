@@ -22,13 +22,66 @@ export function advanceRow(row, to) {
     : { ...base, eta: row.eta ?? "" };
 }
 
-export const TRACKER_STATUSES = ["todo", "doing", "review", "blocked", "done"];
+export const TRACKER_STAGES = ["notStarted", "inProgress", "done"];
+export const TASK_FLAGS = ["", "blocked", "waitingReview", "waitingInfo", "onHold"];
+export const PRIORITIES = ["", "high", "medium", "low"];
 
-export const STANDUP_LANE = { todo: "upcoming", doing: "inProgress", review: "inProgress", blocked: "inProgress", done: "completed" };
+const LEGACY_STATUS = {
+  todo: ["notStarted", ""],
+  doing: ["inProgress", ""],
+  review: ["inProgress", "waitingReview"],
+  blocked: ["inProgress", "blocked"],
+  done: ["done", ""],
+};
+
+// Tasks saved before stages existed carry one `status` that mixed stage and flag.
+export function migrateTask(task) {
+  if (TRACKER_STAGES.includes(task.stage)) return task;
+  const [stage, flag] = LEGACY_STATUS[task.status] ?? ["notStarted", ""];
+  const { status, ...rest } = task;
+  return { ...rest, stage, flag: rest.flag ?? flag };
+}
+
+export const standupLane = (task) =>
+  task.kind === "pr" ? "prs" : { notStarted: "upcoming", inProgress: "inProgress", done: "completed" }[task.stage];
 
 export function taskToRow(task, id) {
-  const base = { id, ref: task.ref ?? "", repo: task.repo ?? "", title: task.title ?? "", subtasks: [] };
-  return STANDUP_LANE[task.status] === "completed" ? { ...base, etaFrom: "", etaTo: "" } : { ...base, eta: "" };
+  const lane = standupLane(task);
+  const base = { id, ref: task.ref ?? "", repo: task.repo ?? "", title: task.title ?? "" };
+  if (lane === "prs") return base;
+  return lane === "completed"
+    ? { ...base, subtasks: [], etaFrom: "", etaTo: task.eta ?? "" }
+    : { ...base, subtasks: [], eta: task.eta ?? "" };
+}
+
+const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+
+export function sortTasks(tasks, by) {
+  if (by !== "priority" && by !== "eta") return tasks;
+  const rank = (task) => PRIORITY_RANK[task.priority] ?? 3;
+  const eta = (task) => task.eta || "9999";
+  const byEta = (a, b) => eta(a).localeCompare(eta(b));
+  const byRank = (a, b) => rank(a) - rank(b);
+  return [...tasks].sort(by === "eta" ? (a, b) => byEta(a, b) || byRank(a, b) : (a, b) => byRank(a, b) || byEta(a, b));
+}
+
+export function itemState(node) {
+  if (node.state === "MERGED") return "merged";
+  if (node.state === "CLOSED") return "closed";
+  return node.isDraft ? "draft" : "open";
+}
+
+// `node` is the issueOrPullRequest shape requested in github.js.
+export function trackerInfo(node) {
+  const kind = node.__typename === "PullRequest" ? "pr" : "issue";
+  const prs = kind === "issue" ? node.closedByPullRequestsReferences?.nodes ?? [] : [];
+  return {
+    kind,
+    title: node.title,
+    state: itemState(node),
+    assignees: (node.assignees?.nodes ?? []).map((a) => a.login),
+    prs: prs.map((pr) => ({ number: pr.number, url: pr.url, state: itemState(pr) })),
+  };
 }
 
 export function sameRef(a, b) {

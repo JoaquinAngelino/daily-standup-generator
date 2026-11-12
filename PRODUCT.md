@@ -28,7 +28,11 @@ The user types numbers and dates; GitHub supplies everything else (titles, links
 ## Capabilities and Constraints
 
 - Sections: Completed (ETA range, subtasks), In Progress and Upcoming (ETA, subtasks), PR Review (PR plus repo).
-- Tracker tab (`#tracker`): a longer-lived task list in five statuses (To do, Doing, In review, Blocked, Done), each task with an optional issue or PR reference (title fetched), free-text title, note and last-updated date. A task with a reference can be added to the matching standup lane (To do to Upcoming, Done to Completed, the rest to In Progress).
+- Tracker tab (`#tracker`): a longer-lived list of issues, PRs or free-text tasks in three sections (Not started, In progress, Done).
+  - Each task shows its GitHub state (open, draft, closed or merged), its assignees and, for issues, the linked PRs with their states. This is refreshed from GitHub the first time the tab opens, or on demand.
+  - Each task can have a status (Blocked, Waiting for review, Waiting for info, On hold), a priority, an ETA and a short note.
+  - Lanes sort by priority, by ETA, or in the order added.
+  - A task can be added to the matching standup lane (PRs go to PR Review), and each issue or PR may be tracked only once.
 - References accepted as `123`, `owner/repo#123`, or a GitHub issue/PR URL; repos are configured in the app, the first being the default.
 - The output format is a team convention and must not change: `### Section` headings; `- **GitHub Issue:** [n](url) — title`; nested `**ETA:**`, `**Subtask description:**`; PR items with `**GitHub Issue:**` and `**Status:**`.
 - Static site on GitHub Pages: plain HTML, CSS and JavaScript modules, no build step, no backend. All state (rows, settings, token) lives in the browser and survives restarts.

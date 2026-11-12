@@ -1,22 +1,31 @@
-import { TRACKER_STATUSES, STANDUP_LANE, parseRef, daysBetween } from "./lib.js";
+import { TRACKER_STAGES, TASK_FLAGS, PRIORITIES, parseRef, daysBetween, sortTasks } from "./lib.js";
 import { t, getLanguage } from "./i18n.js";
 import { el, icon, iconButton, scrollToItem } from "./ui.js";
 
+const SORTS = ["priority", "eta", "manual"];
+const STATE_TONE = { open: "green", draft: "muted", merged: "purple" };
+const FLAG_LABEL = { "": "statusNone" };
+const PRIORITY_LABEL = { "": "priorityNone" };
+
 let ctx;
 let movedId = null;
+let refreshing = false;
 
 export function initTracker(context) {
   ctx = context;
-  document.querySelector("#trackerView").append(...TRACKER_STATUSES.map(laneShell));
+  document.querySelector("#trackerView").append(
+    el("div", { class: "tracker-bar" }),
+    ...TRACKER_STAGES.map(laneShell),
+  );
 }
 
-function laneShell(status) {
-  return el("section", { class: "lane", "data-status": status, "aria-labelledby": `lane-${status}` }, [
+function laneShell(stage) {
+  return el("section", { class: "lane", "data-stage": stage, "aria-labelledby": `tlane-${stage}` }, [
     el("div", { class: "lane-head" }, [
-      el("h2", { id: `lane-${status}`, class: "lane-title", "data-i18n": status, textContent: t(status) }),
+      el("h2", { id: `tlane-${stage}`, class: "lane-title", "data-i18n": stage, textContent: t(stage) }),
       el("span", { class: "lane-count" }),
       el("span", { class: "lane-tools" }),
-      el("button", { type: "button", class: "btn-text", onclick: () => addTask(status) }, [
+      el("button", { type: "button", class: "btn-text", onclick: () => addTask(stage) }, [
         icon("plus"),
         el("span", { "data-i18n": "addTask", textContent: t("addTask") }),
       ]),
@@ -25,8 +34,8 @@ function laneShell(status) {
   ]);
 }
 
-function addTask(status) {
-  const task = { id: ctx.uid(), ref: "", repo: ctx.defaultRepo(), title: "", note: "", status, updated: ctx.today() };
+function addTask(stage) {
+  const task = { id: ctx.uid(), ref: "", repo: ctx.defaultRepo(), title: "", stage, flag: "", priority: "", eta: "", note: "", updated: ctx.today() };
   ctx.state.tracker.push(task);
   ctx.save();
   ctx.render();
@@ -34,12 +43,14 @@ function addTask(status) {
   document.querySelector(`[data-id="${task.id}"] .tape-input`)?.focus({ preventScroll: true });
 }
 
-function moveTask(task, status) {
-  const list = ctx.state.tracker;
-  list.splice(list.indexOf(task), 1);
-  list.push(task);
-  task.status = status;
-  task.updated = ctx.today();
+function update(task, field, value, { touch = false, move = false } = {}) {
+  task[field] = value;
+  if (touch) task.updated = ctx.today();
+  if (move) {
+    const list = ctx.state.tracker;
+    list.splice(list.indexOf(task), 1);
+    list.push(task);
+  }
   movedId = task.id;
   ctx.save();
   ctx.render();
@@ -49,23 +60,50 @@ function moveTask(task, status) {
   }, 800);
 }
 
+export async function refreshTracker() {
+  if (refreshing) return;
+  refreshing = true;
+  ctx.render();
+  await Promise.allSettled(ctx.state.tracker.filter((task) => task.ref?.trim()).map((task) => ctx.commitRef("tracker", task)));
+  refreshing = false;
+  ctx.render();
+}
+
 function ago(iso) {
   return new Intl.RelativeTimeFormat(getLanguage(), { numeric: "auto" }).format(-daysBetween(iso, ctx.today()), "day");
 }
 
-function statusSelect(task) {
+function pill(task, field, values, labelKey, label, onchange) {
   const select = el(
     "select",
     {
-      class: "pill-select",
-      "aria-label": t("status"),
-      "data-focus-key": `${task.id}:status`,
-      onchange: () => moveTask(task, select.value),
+      class: `pill-select${task[field] ? " is-set" : ""}${task[field] === "blocked" ? " is-blocked" : ""}`,
+      "aria-label": t(labelKey),
+      "data-focus-key": `${task.id}:${field}`,
+      onchange: () => onchange(select.value),
     },
-    TRACKER_STATUSES.map((s) => el("option", { value: s, textContent: t(s) })),
+    values.map((v) => el("option", { value: v, textContent: t(label[v] ?? v) })),
   );
-  select.value = task.status;
+  select.value = task[field] ?? "";
   return select;
+}
+
+function stateMark(kind, state, text) {
+  const tone = state === "closed" ? (kind === "pr" ? "red" : "purple") : STATE_TONE[state];
+  return [el("span", { class: `swatch swatch--${tone}`, "aria-hidden": "true" }), el("span", { textContent: text })];
+}
+
+function githubLine(task) {
+  if (!task.state || task.fetching || ctx.hasError(task.id)) return null;
+  const stateText = t(`state_${task.state}`);
+  const people = task.assignees?.length ? task.assignees.map((login) => `@${login}`).join(", ") : t("unassigned");
+  return el("p", { class: "gh-line" }, [
+    el("span", { class: "mark" }, stateMark(task.kind, task.state, task.kind === "pr" ? `PR · ${stateText}` : stateText)),
+    el("span", { class: "gh-people", textContent: people }),
+    ...(task.prs ?? []).map((pr) =>
+      el("a", { class: "mark mark-link", href: pr.url, target: "_blank", rel: "noopener" }, stateMark("pr", pr.state, `PR #${pr.number} · ${t(`state_${pr.state}`)}`)),
+    ),
+  ]);
 }
 
 function standupControl(task) {
@@ -73,8 +111,7 @@ function standupControl(task) {
   if (ctx.inStandup(task)) {
     return el("span", { class: "mark" }, [icon("check"), el("span", { textContent: t("inStandup") })]);
   }
-  const lane = t(STANDUP_LANE[task.status]);
-  return el("button", { type: "button", class: "btn-text btn-small", title: lane, onclick: () => ctx.addToStandup(task) }, [
+  return el("button", { type: "button", class: "btn-text btn-small", onclick: () => ctx.addToStandup(task) }, [
     icon("plus"),
     el("span", { textContent: t("addToStandup") }),
   ]);
@@ -105,6 +142,22 @@ function titleControl(task) {
   return input;
 }
 
+function textInput(task, field, labelKey, className) {
+  const input = el("input", {
+    class: className,
+    value: task[field] ?? "",
+    placeholder: t(labelKey),
+    "aria-label": t(labelKey),
+    spellcheck: false,
+    "data-focus-key": `${task.id}:${field}`,
+    oninput: () => {
+      task[field] = input.value;
+      ctx.save();
+    },
+  });
+  return input;
+}
+
 function renderTask(task) {
   const classes = ["item", ctx.hasError(task.id) && "is-error", task.id === movedId && "is-pressed"].filter(Boolean).join(" ");
   const tapeInput = el("input", {
@@ -126,18 +179,8 @@ function renderTask(task) {
       e.target.blur();
     },
   });
-  const note = el("input", {
-    class: "note-input",
-    value: task.note ?? "",
-    placeholder: t("note"),
-    "aria-label": t("note"),
-    spellcheck: false,
-    "data-focus-key": `${task.id}:note`,
-    oninput: () => {
-      task.note = note.value;
-      ctx.save();
-    },
-  });
+  const eta = ctx.dateInput(task, "eta", "eta");
+  if (task.eta && task.stage !== "done" && task.eta < ctx.today()) eta.classList.add("is-overdue");
   const standup = standupControl(task);
 
   return el("article", { class: classes, "data-id": task.id }, [
@@ -145,35 +188,71 @@ function renderTask(task) {
       el("label", { class: "tape item-tape" }, [tapeInput]),
       el("div", { class: "item-body" }, [
         titleControl(task),
-        el("div", { class: "item-pills" }, [statusSelect(task), ctx.repoSelect("tracker", task)]),
+        githubLine(task),
+        el("div", { class: "item-pills" }, [
+          pill(task, "stage", TRACKER_STAGES, "stage", {}, (v) => update(task, "stage", v, { touch: true, move: true })),
+          pill(task, "flag", TASK_FLAGS, "status", FLAG_LABEL, (v) => update(task, "flag", v, { touch: true })),
+          pill(task, "priority", PRIORITIES, "priority", PRIORITY_LABEL, (v) => update(task, "priority", v)),
+          ctx.repoSelect("tracker", task),
+        ]),
       ]),
       standup ? el("div", { class: "item-actions" }, [standup]) : null,
       el("div", { class: "item-x" }, [iconButton("x", t("remove"), () => ctx.removeItem(ctx.state.tracker, task))]),
       el("div", { class: "item-meta" }, [
-        note,
+        ctx.metaGroup("eta", [eta]),
+        textInput(task, "note", "note", "note-input"),
         task.updated ? el("span", { class: "meta-label", textContent: t("updated", { when: ago(task.updated) }) }) : null,
       ]),
     ]),
   ]);
 }
 
+function renderBar() {
+  const sort = el(
+    "select",
+    {
+      class: "pill-select is-set",
+      "aria-label": t("sortBy"),
+      "data-focus-key": "tracker:sort",
+      onchange: () => {
+        ctx.state.trackerSort = sort.value;
+        ctx.save();
+        ctx.render();
+      },
+    },
+    SORTS.map((s) => el("option", { value: s, textContent: t(`sort_${s}`) })),
+  );
+  sort.value = ctx.state.trackerSort;
+  document.querySelector(".tracker-bar").replaceChildren(
+    el("span", { class: "meta-group" }, [el("span", { class: "meta-label", textContent: t("sortBy") }), sort]),
+    el("button", {
+      type: "button",
+      class: "btn-text btn-small",
+      disabled: refreshing,
+      textContent: t(refreshing ? "refreshing" : "refresh"),
+      onclick: refreshTracker,
+    }),
+  );
+}
+
 export function renderTracker() {
-  for (const status of TRACKER_STATUSES) {
-    const lane = document.querySelector(`[data-status="${status}"]`);
-    const tasks = ctx.state.tracker.filter((task) => task.status === status);
+  renderBar();
+  for (const stage of TRACKER_STAGES) {
+    const lane = document.querySelector(`[data-stage="${stage}"]`);
+    const tasks = sortTasks(ctx.state.tracker.filter((task) => task.stage === stage), ctx.state.trackerSort);
     const count = tasks.length;
     lane.querySelector(".lane-count").textContent = count ? t(count === 1 ? "countTask" : "countTasks", { count }) : "";
 
     const tools = lane.querySelector(".lane-tools");
     tools.replaceChildren();
-    if (status === "done" && count) {
+    if (stage === "done" && count) {
       tools.append(
         el("button", {
           type: "button",
           class: "btn",
           textContent: t("clearDone", { count }),
           onclick: () => {
-            ctx.state.tracker = ctx.state.tracker.filter((task) => task.status !== "done");
+            ctx.state.tracker = ctx.state.tracker.filter((task) => task.stage !== "done");
             ctx.save();
             ctx.render();
           },

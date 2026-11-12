@@ -8,7 +8,7 @@ related_targets: []
 # Surface brief: standup workspace (index.html)
 
 ## Scope and mode
-The single app screen: settings, four stage lanes, Generate, output with Copy for Slack / Copy for GitHub. A Tracker tab (`#tracker`) on the same page shows five status lanes of longer-lived tasks that feed the standup. Mode: Operate.
+The single app screen: settings, four stage lanes, Generate, output with Copy for Slack / Copy for GitHub. A Tracker tab (`#tracker`) on the same page shows three lanes of longer-lived tasks (Not started, In progress, Done), with their GitHub state, status, priority and ETA, that feed the standup. Mode: Operate.
 
 ## Task
 Each workday morning the owner opens the page, carries yesterday's items forward (move per item to the next stage, clear reported Completed items), adds new numbers, generates, and pastes into Slack or GitHub. Pain today: entry is slow, carry-over is manual, layout reads as a clunky form. Avoid: too dense, decorative.

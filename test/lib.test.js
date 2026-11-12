@@ -15,6 +15,9 @@ import {
   taskToRow,
   sameRef,
   daysBetween,
+  migrateTask,
+  sortTasks,
+  trackerInfo,
 } from "../src/lib.js";
 
 test("advanceRow maps ETAs onto the next stage and drops stage-only state", () => {
@@ -130,12 +133,46 @@ test("markdownToSlackText converts to Slack syntax", () => {
   );
 });
 
-test("taskToRow builds a standup row for the lane the status maps to", () => {
-  const task = { id: "t", ref: "5", repo: "o/r", title: "T", note: "n", status: "doing", updated: "2026-11-10" };
-  assert.deepEqual(taskToRow(task, "a"), { id: "a", ref: "5", repo: "o/r", title: "T", subtasks: [], eta: "" });
-  assert.deepEqual(taskToRow({ ...task, status: "done" }, "a"), {
-    id: "a", ref: "5", repo: "o/r", title: "T", subtasks: [], etaFrom: "", etaTo: "",
+test("taskToRow builds a standup row for the lane the task maps to", () => {
+  const task = { id: "t", ref: "5", repo: "o/r", title: "T", note: "n", stage: "inProgress", eta: "2026-11-20" };
+  assert.deepEqual(taskToRow(task, "a"), { id: "a", ref: "5", repo: "o/r", title: "T", subtasks: [], eta: "2026-11-20" });
+  assert.deepEqual(taskToRow({ ...task, stage: "done" }, "a"), {
+    id: "a", ref: "5", repo: "o/r", title: "T", subtasks: [], etaFrom: "", etaTo: "2026-11-20",
   });
+  assert.deepEqual(taskToRow({ ...task, kind: "pr" }, "a"), { id: "a", ref: "5", repo: "o/r", title: "T" });
+});
+
+test("migrateTask splits the old status into stage and flag", () => {
+  assert.deepEqual(migrateTask({ id: "t", status: "blocked" }), { id: "t", stage: "inProgress", flag: "blocked" });
+  assert.deepEqual(migrateTask({ id: "t", status: "todo" }), { id: "t", stage: "notStarted", flag: "" });
+  const current = { id: "t", stage: "done", flag: "" };
+  assert.equal(migrateTask(current), current);
+});
+
+test("sortTasks orders by priority then ETA, or ETA then priority, empties last", () => {
+  const a = { id: "a", priority: "low", eta: "2026-11-12" };
+  const b = { id: "b", priority: "high", eta: "" };
+  const c = { id: "c", priority: "", eta: "2026-11-11" };
+  const d = { id: "d", priority: "high", eta: "2026-11-15" };
+  const ids = (list) => list.map((x) => x.id).join("");
+  assert.equal(ids(sortTasks([a, b, c, d], "priority")), "dbac");
+  assert.equal(ids(sortTasks([a, b, c, d], "eta")), "cadb");
+  assert.equal(ids(sortTasks([a, b, c, d], "manual")), "abcd");
+});
+
+test("trackerInfo reads state, assignees and linked PRs", () => {
+  assert.deepEqual(
+    trackerInfo({
+      __typename: "Issue", title: "T", state: "OPEN",
+      assignees: { nodes: [{ login: "ana" }] },
+      closedByPullRequestsReferences: { nodes: [{ number: 9, url: "u", state: "OPEN", isDraft: true }, { number: 8, url: "v", state: "MERGED" }] },
+    }),
+    { kind: "issue", title: "T", state: "open", assignees: ["ana"], prs: [{ number: 9, url: "u", state: "draft" }, { number: 8, url: "v", state: "merged" }] },
+  );
+  assert.deepEqual(
+    trackerInfo({ __typename: "PullRequest", title: "P", state: "CLOSED", isDraft: false, assignees: { nodes: [] } }),
+    { kind: "pr", title: "P", state: "closed", assignees: [], prs: [] },
+  );
 });
 
 test("sameRef matches number and repo, ignoring repo case and ref form", () => {

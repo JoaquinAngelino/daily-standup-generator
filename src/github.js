@@ -10,6 +10,23 @@ const PR_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   }
 }`;
 
+const ITEM_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issueOrPullRequest(number: $number) {
+      __typename
+      ... on Issue {
+        number title url state
+        assignees(first: 10) { nodes { login } }
+        closedByPullRequestsReferences(first: 10, includeClosedPrs: true) { nodes { number url state isDraft } }
+      }
+      ... on PullRequest {
+        number title url state isDraft
+        assignees(first: 10) { nodes { login } }
+      }
+    }
+  }
+}`;
+
 export class GitHubError extends Error {
   constructor(message, status) {
     super(message);
@@ -40,6 +57,21 @@ export function createClient(token) {
     return body;
   }
 
+  async function graphql(query, { repo, number }, pick) {
+    const [owner, name] = repo.split("/");
+    const body = await request("/graphql", {
+      method: "POST",
+      body: JSON.stringify({ query, variables: { owner, name, number } }),
+    });
+    if (body.errors?.length) {
+      const notFound = body.errors.some((e) => e.type === "NOT_FOUND");
+      throw new GitHubError(body.errors[0].message, notFound ? 404 : 400);
+    }
+    const node = body.data?.repository && pick(body.data.repository);
+    if (!node) throw new GitHubError("Not Found", 404);
+    return node;
+  }
+
   return {
     viewer: () => request("/user"),
 
@@ -48,19 +80,8 @@ export function createClient(token) {
       return { number: i.number, title: i.title, url: i.html_url };
     },
 
-    async pull({ repo, number }) {
-      const [owner, name] = repo.split("/");
-      const body = await request("/graphql", {
-        method: "POST",
-        body: JSON.stringify({ query: PR_QUERY, variables: { owner, name, number } }),
-      });
-      if (body.errors?.length) {
-        const notFound = body.errors.some((e) => e.type === "NOT_FOUND");
-        throw new GitHubError(body.errors[0].message, notFound ? 404 : 400);
-      }
-      const pr = body.data?.repository?.pullRequest;
-      if (!pr) throw new GitHubError("Not Found", 404);
-      return pr;
-    },
+    pull: (ref) => graphql(PR_QUERY, ref, (repo) => repo.pullRequest),
+
+    item: (ref) => graphql(ITEM_QUERY, ref, (repo) => repo.issueOrPullRequest),
   };
 }

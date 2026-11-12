@@ -12,7 +12,7 @@ Live: https://joaquinangelino.github.io/daily-standup-generator/
 
 Everything saves as you type and survives browser restarts.
 
-The **Tracker** tab keeps a longer-lived task list in five statuses: To do, Doing, In review, Blocked and Done. A task can be an issue number (the title is fetched) or free text, and can have a note. **Add to standup** puts a task's issue in the matching standup lane.
+The **Tracker** tab keeps a longer-lived list of issues, PRs or free-text tasks in three sections: Not started, In progress and Done. Each task shows its GitHub state, its assignees and its linked PRs, and can have a status (Blocked, Waiting for review and so on), a priority, an ETA and a note. Lanes sort by priority or by ETA. **Add to standup** puts the task in the matching standup lane.
 
 ## Token
 
