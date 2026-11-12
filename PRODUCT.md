@@ -29,7 +29,7 @@ The user types numbers and dates; GitHub supplies everything else (titles, links
 
 - Sections: Completed (ETA range, subtasks), In Progress and Upcoming (ETA, subtasks), PR Review (PR plus repo).
 - Tracker tab (`#tracker`): a longer-lived list of issues, PRs or free-text tasks in three sections (Not started, In progress, Done).
-  - Each task shows its GitHub state (open, draft, closed or merged), its assignees and, for issues, the linked PRs with their states. This is refreshed from GitHub the first time the tab opens, or on demand.
+  - Each task shows its GitHub state (open, draft, closed or merged), its assignees and, for issues, the PRs that close, are connected to or mention it, with their states. This is refreshed from GitHub the first time the tab opens, or on demand.
   - Each task can have a status (Blocked, Waiting for review, Waiting for info, On hold), a priority, an ETA and a short note.
   - Lanes sort by priority, by ETA, or in the order added.
   - A task can be added to the matching standup lane (PRs go to PR Review), and each issue or PR may be tracked only once.

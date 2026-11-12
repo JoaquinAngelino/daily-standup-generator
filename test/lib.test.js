@@ -165,9 +165,24 @@ test("trackerInfo reads state, assignees and linked PRs", () => {
     trackerInfo({
       __typename: "Issue", title: "T", state: "OPEN",
       assignees: { nodes: [{ login: "ana" }] },
-      closedByPullRequestsReferences: { nodes: [{ number: 9, url: "u", state: "OPEN", isDraft: true }, { number: 8, url: "v", state: "MERGED" }] },
+      closedByPullRequestsReferences: { nodes: [{ number: 8, url: "v", state: "MERGED", repository: { nameWithOwner: "o/r" } }] },
+      timelineItems: {
+        nodes: [
+          { source: {} },
+          { source: { number: 8, url: "v", state: "MERGED", repository: { nameWithOwner: "o/r" } } },
+          { source: { number: 8, url: "w", state: "CLOSED", repository: { nameWithOwner: "o/other" } } },
+          { subject: { number: 9, url: "u", state: "OPEN", isDraft: true, repository: { nameWithOwner: "o/r" } } },
+        ],
+      },
     }),
-    { kind: "issue", title: "T", state: "open", assignees: ["ana"], prs: [{ number: 9, url: "u", state: "draft" }, { number: 8, url: "v", state: "merged" }] },
+    {
+      kind: "issue", title: "T", state: "open", assignees: ["ana"],
+      prs: [
+        { number: 9, url: "u", repo: "o/r", state: "draft" },
+        { number: 8, url: "v", repo: "o/r", state: "merged" },
+        { number: 8, url: "w", repo: "o/other", state: "closed" },
+      ],
+    },
   );
   assert.deepEqual(
     trackerInfo({ __typename: "PullRequest", title: "P", state: "CLOSED", isDraft: false, assignees: { nodes: [] } }),

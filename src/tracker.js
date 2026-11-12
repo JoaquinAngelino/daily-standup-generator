@@ -100,9 +100,11 @@ function githubLine(task) {
   return el("p", { class: "gh-line" }, [
     el("span", { class: "mark" }, stateMark(task.kind, task.state, task.kind === "pr" ? `PR · ${stateText}` : stateText)),
     el("span", { class: "gh-people", textContent: people }),
-    ...(task.prs ?? []).map((pr) =>
-      el("a", { class: "mark mark-link", href: pr.url, target: "_blank", rel: "noopener" }, stateMark("pr", pr.state, `PR #${pr.number} · ${t(`state_${pr.state}`)}`)),
-    ),
+    ...(task.prs ?? []).map((pr) => {
+      const where = pr.repo && pr.repo.toLowerCase() !== task.repo?.toLowerCase() ? pr.repo.split("/")[1] : "PR ";
+      return el("a", { class: "mark mark-link", href: pr.url, target: "_blank", rel: "noopener" },
+        stateMark("pr", pr.state, `${where}#${pr.number} · ${t(`state_${pr.state}`)}`));
+    }),
   ]);
 }
 

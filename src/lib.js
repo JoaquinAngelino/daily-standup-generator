@@ -71,16 +71,32 @@ export function itemState(node) {
   return node.isDraft ? "draft" : "open";
 }
 
+const PR_ORDER = { open: 0, draft: 0, merged: 1, closed: 2 };
+
+// Closing links, manual Development links and PRs that mention the issue; open ones first.
+function linkedPrs(node) {
+  const candidates = [
+    ...(node.closedByPullRequestsReferences?.nodes ?? []),
+    ...(node.timelineItems?.nodes ?? []).map((event) => event.source ?? event.subject),
+  ];
+  const prs = new Map();
+  for (const pr of candidates) {
+    if (!pr?.number || !pr.url) continue;
+    const repo = pr.repository?.nameWithOwner ?? "";
+    prs.set(`${repo}#${pr.number}`.toLowerCase(), { number: pr.number, url: pr.url, repo, state: itemState(pr) });
+  }
+  return [...prs.values()].sort((a, b) => PR_ORDER[a.state] - PR_ORDER[b.state]);
+}
+
 // `node` is the issueOrPullRequest shape requested in github.js.
 export function trackerInfo(node) {
   const kind = node.__typename === "PullRequest" ? "pr" : "issue";
-  const prs = kind === "issue" ? node.closedByPullRequestsReferences?.nodes ?? [] : [];
   return {
     kind,
     title: node.title,
     state: itemState(node),
     assignees: (node.assignees?.nodes ?? []).map((a) => a.login),
-    prs: prs.map((pr) => ({ number: pr.number, url: pr.url, state: itemState(pr) })),
+    prs: kind === "issue" ? linkedPrs(node) : [],
   };
 }
 

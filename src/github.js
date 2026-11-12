@@ -17,7 +17,13 @@ const ITEM_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
       ... on Issue {
         number title url state
         assignees(first: 10) { nodes { login } }
-        closedByPullRequestsReferences(first: 10, includeClosedPrs: true) { nodes { number url state isDraft } }
+        closedByPullRequestsReferences(first: 10, includeClosedPrs: true) { nodes { ...LinkedPr } }
+        timelineItems(first: 100, itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) {
+          nodes {
+            ... on CrossReferencedEvent { source { ...LinkedPr } }
+            ... on ConnectedEvent { subject { ...LinkedPr } }
+          }
+        }
       }
       ... on PullRequest {
         number title url state isDraft
@@ -25,7 +31,9 @@ const ITEM_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
       }
     }
   }
-}`;
+}
+
+fragment LinkedPr on PullRequest { number url state isDraft repository { nameWithOwner } }`;
 
 export class GitHubError extends Error {
   constructor(message, status) {
