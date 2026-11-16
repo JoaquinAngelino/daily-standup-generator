@@ -87,7 +87,7 @@
 
 [hidden] { display: none !important; }
 
-html { scrollbar-color: var(--muted) transparent; }
+html { scrollbar-color: var(--muted) transparent; scroll-padding-top: calc(var(--topbar-h, 64px) + 12px); }
 
 body {
   margin: 0;
@@ -123,6 +123,9 @@ h1, h2, p { margin: 0; }
 }
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -869,7 +872,7 @@ input[type="date"].is-empty:not(:focus)::-webkit-datetime-edit { opacity: 0.45; 
 }
 
 @media (max-width: 640px) {
-  .topbar { flex-wrap: wrap; padding: 12px 16px; gap: 10px 12px; }
+  .topbar { top: calc(-12px - 1.2 * 18px); flex-wrap: wrap; padding: 12px 16px; gap: 10px 12px; }
   .brand { width: 100%; }
   .settings { padding: 16px; }
   .work { padding: 20px 16px 48px; gap: 24px; }

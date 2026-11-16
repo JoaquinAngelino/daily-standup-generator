@@ -365,7 +365,7 @@ A PR review state shows as a neutral chip beside the title: 22px high, 11px radi
 - **Date:** 108px wide. An empty date is muted. The picker indicator stays hidden until hover or focus.
 
 ### Navigation
-A top bar on panel grey with the app name (Title), the view tabs, today's date in muted, then the Settings outline button and the language select pushed right. A single hairline sits below it. The view tabs (Standup, Tracker) are hash links in a segmented control: a muted-at-12% track with 3px padding and an 8px radius. The current tab (`aria-current="page"`) is a field-white segment with ink text and a 1px soft shadow, and the other tab is muted text. Settings opens a drawer beneath on the same panel grey.
+A top bar on panel grey with the app name (Title), the view tabs, today's date in muted, then the Settings outline button and the language select pushed right. A single hairline sits below it. The view tabs (Standup, Tracker) are hash links in a segmented control: a muted-at-12% track with 3px padding and an 8px radius. The current tab (`aria-current="page"`) is a field-white segment with ink text and a 1px soft shadow, and the other tab is muted text. Settings opens a drawer beneath on the same panel grey. The top bar is sticky above the work column, and anchors scroll in below it. On phones only its tabs and buttons stay pinned: the app-name row scrolls away.
 
 ### Output panel
 A panel-grey column with a left hairline. The head holds the Output heading and the two copy buttons. Below it come the editable mono Markdown, then the foot with a hint and the Generate tape. Errors appear as a 1px red-text outlined banner with 6px corners, never filled.

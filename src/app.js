@@ -818,6 +818,7 @@ function changeLanguage(lang) {
 function init() {
   const lang = setLanguage(read(local, LANG_KEY) || (navigator.language?.startsWith("es") ? "es" : "en"));
   $("#language").value = lang;
+  new ResizeObserver(([entry]) => document.documentElement.style.setProperty("--topbar-h", `${entry.borderBoxSize[0].blockSize}px`)).observe($(".topbar"));
 
   $("#repos").value = state.repos.join("\n");
   $("#remember").checked = !read(session, TOKEN_KEY);
