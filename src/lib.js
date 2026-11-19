@@ -300,7 +300,7 @@ export function markdownToHtml(md) {
   return out.join("");
 }
 
-// Fallback when HTML cannot go on the clipboard. Slack converts Markdown links itself, so they stay as is.
+// Slack pastes this plain text over the HTML; it converts Markdown links itself, so they stay as is.
 export function markdownToSlackText(md) {
   return String(md)
     .split("\n")
@@ -311,4 +311,49 @@ export function markdownToSlackText(md) {
         .replace(/^(\s*)[-*]\s+/, "$1• ");
     })
     .join("\n");
+}
+
+function inlineOps(text, attrs = {}) {
+  const ops = [];
+  const push = (insert, extra) => {
+    const attributes = { ...attrs, ...extra };
+    if (insert) ops.push(Object.keys(attributes).length ? { insert, attributes } : { insert });
+  };
+  const token = /\*\*(.+?)\*\*|\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+  let last = 0;
+  for (const m of text.matchAll(token)) {
+    push(text.slice(last, m.index));
+    if (m[1] !== undefined) ops.push(...inlineOps(m[1], { ...attrs, bold: true }));
+    else push(m[2], { link: m[3] });
+    last = m.index + m[0].length;
+  }
+  push(text.slice(last));
+  return ops;
+}
+
+// Quill Delta for Slack's own clipboard type (slack/texty), the only paste route that keeps underline.
+export function markdownToSlackDelta(md) {
+  const ops = [];
+  const indents = [];
+  for (const raw of String(md).split("\n")) {
+    const line = raw.replace(/\s+$/, "");
+    const item = /^(\s*)[-*]\s+(.*)$/.exec(line);
+    if (item) {
+      const indent = item[1].replace(/\t/g, "    ").length;
+      while (indents.length && indent < indents.at(-1)) indents.pop();
+      if (!indents.length || indent > indents.at(-1)) indents.push(indent);
+      const depth = indents.length - 1;
+      ops.push(...inlineOps(item[2]), {
+        insert: "\n",
+        attributes: depth ? { list: "bullet", indent: depth } : { list: "bullet" },
+      });
+      continue;
+    }
+    indents.length = 0;
+    const heading = headingText(line);
+    ops.push(...(heading !== null ? inlineOps(heading, { bold: true, underline: true }) : inlineOps(line)), {
+      insert: "\n",
+    });
+  }
+  return JSON.stringify({ ops });
 }

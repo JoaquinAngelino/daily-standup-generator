@@ -11,6 +11,7 @@ import {
   toMarkdown,
   markdownToHtml,
   markdownToSlackText,
+  markdownToSlackDelta,
   advanceRow,
   taskToRow,
   sameRef,
@@ -235,4 +236,25 @@ test("reorder moves an item before another, or to the end", () => {
   assert.deepEqual(reorder([a, b, c], c, a), [c, a, b]);
   assert.deepEqual(reorder([a, b, c], a, undefined), [b, c, a]);
   assert.deepEqual(reorder([a, b, c], a, c), [b, a, c]);
+});
+
+test("markdownToSlackDelta underlines headings and nests bullets", () => {
+  const delta = JSON.parse(
+    markdownToSlackDelta("### <ins>Completed</ins>\n- **GitHub Issue:** [7](https://x.io/7) — a\n    - **ETA:** 1\n\nplain"),
+  );
+  assert.deepEqual(delta.ops, [
+    { insert: "Completed", attributes: { bold: true, underline: true } },
+    { insert: "\n" },
+    { insert: "GitHub Issue:", attributes: { bold: true } },
+    { insert: " " },
+    { insert: "7", attributes: { link: "https://x.io/7" } },
+    { insert: " — a" },
+    { insert: "\n", attributes: { list: "bullet" } },
+    { insert: "ETA:", attributes: { bold: true } },
+    { insert: " 1" },
+    { insert: "\n", attributes: { list: "bullet", indent: 1 } },
+    { insert: "\n" },
+    { insert: "plain" },
+    { insert: "\n" },
+  ]);
 });
