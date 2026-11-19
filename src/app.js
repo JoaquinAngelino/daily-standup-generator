@@ -12,7 +12,7 @@ import {
   node,
   issueNode,
   toMarkdown,
-  markdownToSlackDelta,
+  markdownToPlainText,
   markdownToHtml,
   markdownToSlackText,
   TRACKER_STAGES,
@@ -683,39 +683,19 @@ function flashCopied(sel) {
   }, 300);
 }
 
-// Chromium keeps slack/texty for Slack to read; other browsers drop it and Slack falls back to the plain text.
-function copyForSlack(markdown) {
-  const onCopy = (event) => {
-    event.preventDefault();
-    event.clipboardData.setData("text/plain", markdownToSlackText(markdown));
-    event.clipboardData.setData("text/html", markdownToHtml(markdown));
-    event.clipboardData.setData("slack/texty", markdownToSlackDelta(markdown));
-  };
-  document.addEventListener("copy", onCopy, { once: true });
-  try {
-    return document.execCommand("copy");
-  } catch {
-    return false;
-  } finally {
-    document.removeEventListener("copy", onCopy);
-  }
-}
-
 async function copyOutput(target) {
   const markdown = $("#output").value.trim();
   if (!markdown) return;
   try {
     if (target !== "slack") await navigator.clipboard.writeText(markdown);
-    else if (!copyForSlack(markdown)) {
-      if (window.ClipboardItem && navigator.clipboard?.write) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/plain": new Blob([markdownToSlackText(markdown)], { type: "text/plain" }),
-            "text/html": new Blob([markdownToHtml(markdown)], { type: "text/html" }),
-          }),
-        ]);
-      } else await navigator.clipboard.writeText(markdownToSlackText(markdown));
-    }
+    else if (window.ClipboardItem && navigator.clipboard?.write) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": new Blob([markdownToPlainText(markdown)], { type: "text/plain" }),
+          "text/html": new Blob([markdownToHtml(markdown)], { type: "text/html" }),
+        }),
+      ]);
+    } else await navigator.clipboard.writeText(markdownToSlackText(markdown));
     setStatus("#copyStatus", () => t(target === "slack" ? "copiedSlack" : "copiedGithub"), "ok");
     flashCopied(target === "slack" ? "#copySlack" : "#copyGithub");
   } catch {
