@@ -292,7 +292,7 @@ export function markdownToHtml(md) {
     }
     closeTo(-1);
     const heading = headingText(line);
-    if (heading !== null) out.push(`<div><u><b>${inlineHtml(heading)}</b></u></div>`);
+    if (heading !== null) out.push(`<div><b><i>${inlineHtml(heading)}</i></b></div>`);
     else if (line) out.push(`<div>${inlineHtml(line)}</div>`);
     else if (out.length && out.at(-1) !== "<br>") out.push("<br>");
   }
@@ -300,29 +300,16 @@ export function markdownToHtml(md) {
   return out.join("");
 }
 
-// Fallback when HTML cannot go on the clipboard: Slack pastes this as Markdown and converts the links itself.
+// Slack pastes this plain text over the HTML; it converts Markdown links itself, so they stay as is.
 export function markdownToSlackText(md) {
   return String(md)
     .split("\n")
     .map((line) => {
       const heading = headingText(line);
-      return (heading !== null ? `**${heading}**` : line)
+      if (heading !== null) return `*_${heading}_*`;
+      return line
         .replace(/\*\*(.+?)\*\*/g, "*$1*")
         .replace(/^(\s*)[-*]\s+/, "$1• ");
     })
-    .join("\n");
-}
-
-// Sits beside the HTML on the clipboard. Slack drops the HTML when this text looks like Markdown.
-export function markdownToPlainText(md) {
-  return String(md)
-    .split("\n")
-    .map((line) =>
-      (headingText(line) ?? line)
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1 ($2)")
-        .replace(/\*\*(.+?)\*\*/g, "$1")
-        .replace(/^(\s*)[-*]\s+/, "$1• ")
-        .replaceAll("`", "'"),
-    )
     .join("\n");
 }

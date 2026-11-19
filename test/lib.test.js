@@ -11,7 +11,6 @@ import {
   toMarkdown,
   markdownToHtml,
   markdownToSlackText,
-  markdownToPlainText,
   advanceRow,
   taskToRow,
   sameRef,
@@ -111,7 +110,7 @@ test("markdownToHtml nests lists, escapes text and links only http(s)", () => {
   );
   assert.equal(
     html,
-    '<div><u><b>Done</b></u></div>' +
+    '<div><b><i>Done</i></b></div>' +
       '<ul><li><b>Issue:</b> <a href="https://x.io/7">7</a> — a &lt;b&gt;' +
       "<ul><li><b>ETA:</b> 1<ul><li>deep</li></ul></li></ul>" +
       "</li><li>next [js](javascript:alert(1))</li></ul>" +
@@ -126,14 +125,14 @@ test("markdownToHtml handles 2-space indents from manual edits", () => {
 test("markdownToHtml keeps one break between sections", () => {
   assert.equal(
     markdownToHtml("### A\n- x\n\n\n### B\n- y"),
-    "<div><u><b>A</b></u></div><ul><li>x</li></ul><br><div><u><b>B</b></u></div><ul><li>y</li></ul>",
+    "<div><b><i>A</i></b></div><ul><li>x</li></ul><br><div><b><i>B</i></b></div><ul><li>y</li></ul>",
   );
 });
 
 test("markdownToSlackText converts to Slack syntax", () => {
   assert.equal(
     markdownToSlackText("### <ins>Completed</ins>\n- **GitHub Issue:** [7](https://x.io/7) — a\n    - **ETA:** 1"),
-    "*Completed*\n• *GitHub Issue:* [7](https://x.io/7) — a\n    • *ETA:* 1",
+    "*_Completed_*\n• *GitHub Issue:* [7](https://x.io/7) — a\n    • *ETA:* 1",
   );
 });
 
@@ -236,11 +235,4 @@ test("reorder moves an item before another, or to the end", () => {
   assert.deepEqual(reorder([a, b, c], c, a), [c, a, b]);
   assert.deepEqual(reorder([a, b, c], a, undefined), [b, c, a]);
   assert.deepEqual(reorder([a, b, c], a, c), [b, a, c]);
-});
-
-test("markdownToPlainText leaves no Markdown for Slack to detect", () => {
-  assert.equal(
-    markdownToPlainText("### <ins>Completed</ins>\n- **GitHub Issue:** [7](https://x.io/7) — fix `a`\n    - **ETA:** 1"),
-    "Completed\n• GitHub Issue: 7 (https://x.io/7) — fix 'a'\n    • ETA: 1",
-  );
 });

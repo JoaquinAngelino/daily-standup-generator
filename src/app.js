@@ -12,7 +12,6 @@ import {
   node,
   issueNode,
   toMarkdown,
-  markdownToPlainText,
   markdownToHtml,
   markdownToSlackText,
   TRACKER_STAGES,
@@ -687,15 +686,16 @@ async function copyOutput(target) {
   const markdown = $("#output").value.trim();
   if (!markdown) return;
   try {
-    if (target !== "slack") await navigator.clipboard.writeText(markdown);
-    else if (window.ClipboardItem && navigator.clipboard?.write) {
+    if (target === "slack" && window.ClipboardItem && navigator.clipboard?.write) {
       await navigator.clipboard.write([
         new ClipboardItem({
-          "text/plain": new Blob([markdownToPlainText(markdown)], { type: "text/plain" }),
+          "text/plain": new Blob([markdownToSlackText(markdown)], { type: "text/plain" }),
           "text/html": new Blob([markdownToHtml(markdown)], { type: "text/html" }),
         }),
       ]);
-    } else await navigator.clipboard.writeText(markdownToSlackText(markdown));
+    } else {
+      await navigator.clipboard.writeText(target === "slack" ? markdownToSlackText(markdown) : markdown);
+    }
     setStatus("#copyStatus", () => t(target === "slack" ? "copiedSlack" : "copiedGithub"), "ok");
     flashCopied(target === "slack" ? "#copySlack" : "#copyGithub");
   } catch {
