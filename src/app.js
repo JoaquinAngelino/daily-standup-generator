@@ -687,11 +687,9 @@ async function copyOutput(target) {
   if (!markdown) return;
   try {
     if (target === "slack" && window.ClipboardItem && navigator.clipboard?.write) {
+      // HTML only: given plain text too, Slack pastes that and drops the heading underline.
       await navigator.clipboard.write([
-        new ClipboardItem({
-          "text/plain": new Blob([markdownToSlackText(markdown)], { type: "text/plain" }),
-          "text/html": new Blob([markdownToHtml(markdown)], { type: "text/html" }),
-        }),
+        new ClipboardItem({ "text/html": new Blob([markdownToHtml(markdown)], { type: "text/html" }) }),
       ]);
     } else {
       await navigator.clipboard.writeText(target === "slack" ? markdownToSlackText(markdown) : markdown);

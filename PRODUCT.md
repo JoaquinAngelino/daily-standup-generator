@@ -35,7 +35,7 @@ The user types numbers and dates; GitHub supplies everything else (titles, links
   - A task can be added to the matching standup lane (PRs go to PR Review), and each issue or PR may be tracked only once.
 - Items in both views can be reordered by dragging their grip, or with the arrow keys. In the standup this sets the order of the generated output.
 - References accepted as `123`, `owner/repo#123`, or a GitHub issue/PR URL; repos are configured in the app, the first being the default.
-- The output format is a team convention and must not change: `### Section` headings; `- **GitHub Issue:** [n](url) — title`; nested `**ETA:**`, `**Subtask description:**`; PR items with `**GitHub Issue:**` and `**Status:**`.
+- The output format is a team convention and must not change: `### <ins>Section</ins>` headings; `- **GitHub Issue:** [n](url) — title`; nested `**ETA:**`, `**Subtask description:**`; PR items with `**GitHub Issue:**` and `**Status:**`.
 - Static site on GitHub Pages: plain HTML, CSS and JavaScript modules, no build step, no backend. All state (rows, settings, token) lives in the browser and survives restarts.
 - Read-only GitHub access through a user-supplied token (REST for issues, GraphQL for PRs).
 - UI languages: English and Spanish. Generated standup text is always English.

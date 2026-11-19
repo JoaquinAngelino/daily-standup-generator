@@ -91,13 +91,13 @@ test("toMarkdown renders sections, nesting and skips empty values", () => {
   assert.equal(
     md,
     [
-      "### Completed",
+      "### <ins>Completed</ins>",
       "- **GitHub Issue:** [7](https://github.com/o/r/issues/7) — Login <fails>",
       "    - **ETA:** 11-03 -> 11-05",
       "    - **Subtask description:** API",
       "        - **ETA:** 11-04",
       "",
-      "### PR Review",
+      "### <ins>PR Review</ins>",
       "- **PR:** [9](https://github.com/o/r/pull/9) — Fix",
       "    - **Status:** Approved",
     ].join("\n"),
@@ -106,7 +106,7 @@ test("toMarkdown renders sections, nesting and skips empty values", () => {
 
 test("markdownToHtml nests lists, escapes text and links only http(s)", () => {
   const html = markdownToHtml(
-    "### Done\n- **Issue:** [7](https://x.io/7) — a <b>\n    - **ETA:** 1\n        - deep\n- next [js](javascript:alert(1))\nplain",
+    "### <ins>Done</ins>\n- **Issue:** [7](https://x.io/7) — a <b>\n    - **ETA:** 1\n        - deep\n- next [js](javascript:alert(1))\nplain",
   );
   assert.equal(
     html,
@@ -131,7 +131,7 @@ test("markdownToHtml keeps one break between sections", () => {
 
 test("markdownToSlackText converts to Slack syntax", () => {
   assert.equal(
-    markdownToSlackText("### Completed\n- **GitHub Issue:** [7](https://x.io/7) — a\n    - **ETA:** 1"),
+    markdownToSlackText("### <ins>Completed</ins>\n- **GitHub Issue:** [7](https://x.io/7) — a\n    - **ETA:** 1"),
     "*Completed*\n• *GitHub Issue:* [7](https://x.io/7) — a\n    • *ETA:* 1",
   );
 });

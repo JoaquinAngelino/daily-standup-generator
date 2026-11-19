@@ -237,7 +237,7 @@ function renderNode(n, depth) {
 export function toMarkdown(blocks) {
   return blocks
     .filter((b) => b.items.length)
-    .map((b) => [`### ${b.title}`, ...b.items.flatMap((i) => renderNode(i, 0))].join("\n"))
+    .map((b) => [`### <ins>${b.title}</ins>`, ...b.items.flatMap((i) => renderNode(i, 0))].join("\n"))
     .join("\n\n");
 }
 
@@ -248,6 +248,11 @@ export function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function headingText(line) {
+  const heading = /^#{1,6}\s+(.*)$/.exec(line);
+  return heading && heading[1].replace(/<\/?ins>/g, "");
 }
 
 function inlineHtml(text) {
@@ -286,8 +291,8 @@ export function markdownToHtml(md) {
       continue;
     }
     closeTo(-1);
-    const heading = /^#{1,6}\s+(.*)$/.exec(line);
-    if (heading) out.push(`<div><u><b>${inlineHtml(heading[1])}</b></u></div>`);
+    const heading = headingText(line);
+    if (heading !== null) out.push(`<div><u><b>${inlineHtml(heading)}</b></u></div>`);
     else if (line) out.push(`<div>${inlineHtml(line)}</div>`);
     else if (out.length && out.at(-1) !== "<br>") out.push("<br>");
   }
@@ -295,13 +300,13 @@ export function markdownToHtml(md) {
   return out.join("");
 }
 
-// Slack pastes this plain text over the HTML; it converts Markdown links itself, so they stay as is.
+// Fallback when HTML cannot go on the clipboard. Slack converts Markdown links itself, so they stay as is.
 export function markdownToSlackText(md) {
   return String(md)
     .split("\n")
     .map((line) => {
-      const heading = /^#{1,6}\s+(.*)$/.exec(line);
-      return (heading ? `**${heading[1]}**` : line)
+      const heading = headingText(line);
+      return (heading !== null ? `**${heading}**` : line)
         .replace(/\*\*(.+?)\*\*/g, "*$1*")
         .replace(/^(\s*)[-*]\s+/, "$1• ");
     })
