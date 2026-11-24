@@ -1,4 +1,4 @@
-import { TRACKER_STAGES, TASK_FLAGS, PRIORITIES, parseRef, daysBetween, sortTasks, prKey, prInfo, mergePrs, reorder } from "./lib.js";
+import { TRACKER_STAGES, TRACKER_FILTERS, matchesFilter, TASK_FLAGS, PRIORITIES, parseRef, daysBetween, sortTasks, prKey, prInfo, mergePrs, reorder } from "./lib.js";
 import { t, getLanguage } from "./i18n.js";
 import { el, icon, iconButton, scrollToItem, dragHandle } from "./ui.js";
 
@@ -31,18 +31,24 @@ function laneShell(stage) {
         icon("plus"),
         el("span", { "data-i18n": "addTask", textContent: t("addTask") }),
       ]),
+      el("button", { type: "button", class: "btn-text", onclick: () => addTask(stage, true) }, [
+        icon("plus"),
+        el("span", { "data-i18n": "addPersonal", textContent: t("addPersonal") }),
+      ]),
     ]),
     el("div", { class: "rows" }),
   ]);
 }
 
-function addTask(stage) {
-  const task = { id: ctx.uid(), ref: "", repo: ctx.defaultRepo(), title: "", stage, flag: "", priority: "", eta: "", note: "", updated: ctx.today() };
+function addTask(stage, personal = false) {
+  const task = { id: ctx.uid(), ref: "", repo: personal ? "" : ctx.defaultRepo(), title: "", stage, flag: "", priority: "", eta: "", note: "", updated: ctx.today() };
+  if (personal) task.personal = true;
   ctx.state.tracker.push(task);
+  if (!matchesFilter(task, ctx.state.trackerFilter)) ctx.state.trackerFilter = "all";
   ctx.save();
   ctx.render();
   scrollToItem(task.id);
-  document.querySelector(`[data-id="${task.id}"] .tape-input`)?.focus({ preventScroll: true });
+  document.querySelector(`[data-id="${task.id}"] :is(.tape-input, .title-input)`)?.focus({ preventScroll: true });
 }
 
 function update(task, field, value, { touch = false, move = false } = {}) {
@@ -62,11 +68,12 @@ function update(task, field, value, { touch = false, move = false } = {}) {
   }, 800);
 }
 
-const laneTasks = (stage) => sortTasks(ctx.state.tracker.filter((task) => task.stage === stage), ctx.state.trackerSort);
+const stageTasks = (stage) => sortTasks(ctx.state.tracker.filter((task) => task.stage === stage), ctx.state.trackerSort);
+const laneTasks = (stage) => stageTasks(stage).filter((task) => matchesFilter(task, ctx.state.trackerFilter));
 
-// Freezes the order on screen first, so switching to manual sorting moves nothing else.
+// Freezes the current order of every task, filtered out or not, so switching to manual sorting moves nothing else.
 function dropTask(task, stage, beforeId) {
-  const shown = TRACKER_STAGES.flatMap(laneTasks);
+  const shown = TRACKER_STAGES.flatMap(stageTasks);
   ctx.state.tracker = reorder(shown, task, shown.find((x) => x.id === beforeId));
   ctx.state.trackerSort = "manual";
   if (task.stage !== stage) {
@@ -356,7 +363,9 @@ function renderTask(task) {
       focusKey: `${task.id}:drag`,
     }),
     el("div", { class: "item-main" }, [
-      el("label", { class: "tape item-tape" }, [tapeInput]),
+      task.personal
+        ? el("span", { class: "tape item-tape is-personal", textContent: t("personal") })
+        : el("label", { class: "tape item-tape" }, [tapeInput]),
       el("div", { class: "item-body" }, [
         titleControl(task),
         githubLine(task),
@@ -368,7 +377,7 @@ function renderTask(task) {
           pill(task, "stage", TRACKER_STAGES, "stage", {}, (v) => update(task, "stage", v, { touch: true, move: true })),
           pill(task, "flag", TASK_FLAGS, "status", FLAG_LABEL, (v) => update(task, "flag", v, { touch: true })),
           pill(task, "priority", PRIORITIES, "priority", PRIORITY_LABEL, (v) => update(task, "priority", v)),
-          ctx.repoSelect("tracker", task),
+          task.personal ? null : ctx.repoSelect("tracker", task),
         ]),
         etaChip(task),
         task.updated ? el("span", { class: "meta-label", textContent: t("updated", { when: ago(task.updated) }) }) : null,
@@ -380,6 +389,21 @@ function renderTask(task) {
 }
 
 function renderBar() {
+  const filter = el(
+    "select",
+    {
+      class: "pill-select is-set",
+      "aria-label": t("show"),
+      "data-focus-key": "tracker:filter",
+      onchange: () => {
+        ctx.state.trackerFilter = filter.value;
+        ctx.save();
+        ctx.render();
+      },
+    },
+    TRACKER_FILTERS.map((f) => el("option", { value: f, textContent: t(`filter_${f}`) })),
+  );
+  filter.value = ctx.state.trackerFilter;
   const sort = el(
     "select",
     {
@@ -396,6 +420,7 @@ function renderBar() {
   );
   sort.value = ctx.state.trackerSort;
   document.querySelector(".tracker-bar").replaceChildren(
+    el("span", { class: "meta-group" }, [el("span", { class: "meta-label", textContent: t("show") }), filter]),
     el("span", { class: "meta-group" }, [el("span", { class: "meta-label", textContent: t("sortBy") }), sort]),
     el("button", {
       type: "button",
@@ -424,7 +449,7 @@ export function renderTracker() {
           class: "btn",
           textContent: t("clearDone", { count }),
           onclick: () => {
-            ctx.state.tracker = ctx.state.tracker.filter((task) => task.stage !== "done");
+            ctx.state.tracker = ctx.state.tracker.filter((task) => task.stage !== "done" || !matchesFilter(task, ctx.state.trackerFilter));
             ctx.save();
             ctx.render();
           },

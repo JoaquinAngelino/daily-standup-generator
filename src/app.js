@@ -15,6 +15,7 @@ import {
   markdownToHtml,
   markdownToSlackText,
   TRACKER_STAGES,
+  TRACKER_FILTERS,
   migrateTask,
   standupLane,
   trackerInfo,
@@ -107,6 +108,7 @@ function loadState() {
     sections,
     tracker,
     trackerSort: ["priority", "eta", "manual"].includes(saved.trackerSort) ? saved.trackerSort : "priority",
+    trackerFilter: TRACKER_FILTERS.includes(saved.trackerFilter) ? saved.trackerFilter : "all",
     outputOpen: saved.outputOpen !== false,
   };
 }

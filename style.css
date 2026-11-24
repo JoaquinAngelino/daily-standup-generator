@@ -335,6 +335,7 @@ body:has(.is-dragging) { cursor: grabbing; user-select: none; }
   cursor: text;
 }
 
+.item-tape.is-personal { --tape: var(--purple); --tape-text: var(--purple-text); cursor: default; }
 .item-tape:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .tape-input {

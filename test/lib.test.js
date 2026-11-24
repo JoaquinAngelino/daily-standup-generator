@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   parseRepoList,
+  matchesFilter,
   parseRef,
   formatRange,
   reviewStatus,
@@ -235,4 +236,12 @@ test("reorder moves an item before another, or to the end", () => {
   assert.deepEqual(reorder([a, b, c], c, a), [c, a, b]);
   assert.deepEqual(reorder([a, b, c], a, undefined), [b, c, a]);
   assert.deepEqual(reorder([a, b, c], a, c), [b, a, c]);
+});
+
+test("matchesFilter splits personal tasks from work tasks", () => {
+  const work = { id: "w" };
+  const personal = { id: "p", personal: true };
+  assert.deepEqual([work, personal].filter((x) => matchesFilter(x, "all")), [work, personal]);
+  assert.deepEqual([work, personal].filter((x) => matchesFilter(x, "work")), [work]);
+  assert.deepEqual([work, personal].filter((x) => matchesFilter(x, "personal")), [personal]);
 });

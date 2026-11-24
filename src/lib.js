@@ -23,6 +23,7 @@ export function advanceRow(row, to) {
 }
 
 export const TRACKER_STAGES = ["notStarted", "inProgress", "done"];
+export const TRACKER_FILTERS = ["all", "work", "personal"];
 export const TASK_FLAGS = ["", "blocked", "waitingReview", "waitingInfo", "onHold"];
 export const PRIORITIES = ["", "high", "medium", "low"];
 
@@ -53,6 +54,9 @@ export function taskToRow(task, id) {
     ? { ...base, subtasks: [], etaFrom: "", etaTo: task.eta ?? "" }
     : { ...base, subtasks: [], eta: task.eta ?? "" };
 }
+
+export const matchesFilter = (task, filter) =>
+  filter === "personal" ? Boolean(task.personal) : filter === "work" ? !task.personal : true;
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
 
