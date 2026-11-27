@@ -1,4 +1,7 @@
+import { toB64, fromB64 } from "./crypto.js";
+
 const API = "https://api.github.com";
+const SYNC_PATH = "standup.enc";
 
 const PR_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
@@ -63,6 +66,7 @@ export function createClient(token) {
           Accept: "application/vnd.github+json",
           Authorization: `Bearer ${token}`,
           "X-GitHub-Api-Version": "2022-11-28",
+          ...(init.body && { "Content-Type": "application/json" }),
         },
       });
     } catch {
@@ -75,6 +79,9 @@ export function createClient(token) {
     }
     return body;
   }
+
+  const found = (promise) => promise.catch((err) => (err.status === 404 ? null : Promise.reject(err)));
+  const contents = (repo) => `/repos/${repo}/contents/${SYNC_PATH}`;
 
   async function graphql(query, { repo, number }, pick) {
     const [owner, name] = repo.split("/");
@@ -102,5 +109,32 @@ export function createClient(token) {
     pull: (ref) => graphql(PR_QUERY, ref, (repo) => repo.pullRequest),
 
     item: (ref) => graphql(ITEM_QUERY, ref, (repo) => repo.issueOrPullRequest),
+
+    async readFile({ repo, branch }) {
+      const file = await found(request(`${contents(repo)}?ref=${encodeURIComponent(branch)}`, { cache: "no-store" }));
+      return file && { version: file.sha, bytes: fromB64(file.content.replace(/\s/g, "")) };
+    },
+
+    async writeFile({ repo, branch }, bytes, version) {
+      const body = JSON.stringify({ message: "Update standup data", content: toB64(bytes), branch, ...(version && { sha: version }) });
+      try {
+        // keepalive lets a save started as the tab closes finish; browsers cap its body at 64 KB.
+        return (await request(contents(repo), { method: "PUT", body, keepalive: body.length < 60_000 })).content.sha;
+      } catch (err) {
+        err.conflict = err.status === 409 || err.status === 422;
+        throw err;
+      }
+    },
+
+    // Data lives on its own branch, so saving never redeploys a site built from the default branch.
+    async ensureBranch({ repo, branch }) {
+      if (await found(request(`/repos/${repo}/branches/${encodeURIComponent(branch)}`))) return;
+      const { default_branch } = await request(`/repos/${repo}`);
+      const head = await request(`/repos/${repo}/git/ref/heads/${encodeURIComponent(default_branch)}`);
+      await request(`/repos/${repo}/git/refs`, {
+        method: "POST",
+        body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: head.object.sha }),
+      });
+    },
   };
 }

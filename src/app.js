@@ -29,10 +29,16 @@ import { createClient, GitHubError } from "./github.js";
 import { t, setLanguage, getLanguage, applyTranslations } from "./i18n.js";
 import { TONE, $, reducedMotion, el, icon, iconButton, scrollToItem, dragHandle } from "./ui.js";
 import { initTracker, renderTracker, refreshTracker } from "./tracker.js";
+import { snapshot, applySnapshot } from "./merge.js";
+import { createSync } from "./sync.js";
 
 const STATE_KEY = "dsg.state.v1";
 const TOKEN_KEY = "dsg.token";
 const LANG_KEY = "dsg.lang";
+const PASSPHRASE_KEY = "dsg.passphrase";
+const SYNC_TARGET_KEY = "dsg.syncTarget";
+const SYNC_META_KEY = "dsg.sync.v1";
+const DEFAULT_BRANCH = "standup-data";
 const SECTIONS = [...ISSUE_SECTIONS, "prs"];
 
 function getStorage(kind) {
@@ -119,13 +125,92 @@ const statuses = new Map();
 let bannerText = null;
 let pressedId = null;
 
-function save() {
+function persist() {
   write(local, STATE_KEY, JSON.stringify(state));
 }
 
-function getToken() {
-  return read(session, TOKEN_KEY) || read(local, TOKEN_KEY) || "";
+function save() {
+  persist();
+  syncer.changed();
 }
+
+function readSecret(key) {
+  return read(session, key) || read(local, key) || "";
+}
+
+const getToken = () => readSecret(TOKEN_KEY);
+
+function parseJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function loadSyncTarget() {
+  const saved = parseJson(read(local, SYNC_TARGET_KEY));
+  return { repo: typeof saved?.repo === "string" ? saved.repo : "", branch: saved?.branch || DEFAULT_BRANCH };
+}
+
+let syncTarget = loadSyncTarget();
+
+function syncConfig() {
+  const { repo, branch } = syncTarget;
+  const token = getToken();
+  const passphrase = readSecret(PASSPHRASE_KEY);
+  return {
+    repo,
+    branch,
+    token,
+    passphrase,
+    ready: Boolean(token && passphrase && parseRepoList(repo).length),
+    target: `${repo.toLowerCase()}@${branch}`,
+  };
+}
+
+function applySynced(data) {
+  applySnapshot(state, data);
+  persist();
+  const repos = state.repos.join("\n");
+  if (parseRepoList($("#repos").value).join("\n") !== repos) $("#repos").value = repos;
+  if ($("#output").value !== state.output) $("#output").value = state.output;
+  render();
+}
+
+function describeSyncError(err) {
+  if (err.code) return t(err.code);
+  if (err instanceof GitHubError && (err.status === 403 || err.status === 404)) {
+    return t("errSyncAccess", { repo: syncTarget.repo });
+  }
+  return describeError(err);
+}
+
+function paintSync(status, err) {
+  if (status === "error") return setStatus("#syncStatus", () => describeSyncError(err), "error");
+  if (status === "synced") {
+    const time = new Date();
+    return setStatus("#syncStatus", () => t("syncedAt", { time: time.toLocaleTimeString(getLanguage(), { timeStyle: "short" }) }), "ok");
+  }
+  const key = { off: "syncOff", syncing: "syncing", local: "syncPending" }[status];
+  setStatus("#syncStatus", () => t(key));
+}
+
+const syncer = createSync({
+  backend: {
+    read: (cfg) => createClient(cfg.token).readFile(cfg),
+    write: (cfg, bytes, version) => createClient(cfg.token).writeFile(cfg, bytes, version),
+    ensureBranch: (cfg) => createClient(cfg.token).ensureBranch(cfg),
+  },
+  config: syncConfig,
+  local: () => snapshot(state),
+  apply: applySynced,
+  storage: {
+    load: () => parseJson(read(local, SYNC_META_KEY)),
+    save: (meta) => write(local, SYNC_META_KEY, meta && JSON.stringify(meta)),
+  },
+  onStatus: paintSync,
+});
 
 const isSpent = (row) => Boolean(row.reportedOn) && row.reportedOn < todayIso();
 
@@ -721,25 +806,63 @@ async function checkToken() {
   }
 }
 
-function storeToken(value) {
+function storeSecret(key, value) {
   const remember = $("#remember").checked;
-  write(remember ? local : session, TOKEN_KEY, value);
-  write(remember ? session : local, TOKEN_KEY, null);
+  write(remember ? local : session, key, value);
+  write(remember ? session : local, key, null);
 }
 
 function saveToken() {
   const input = $("#token");
   const value = input.value.trim();
   if (!value) return;
-  storeToken(value);
+  storeSecret(TOKEN_KEY, value);
   input.value = "";
   checkToken();
   render();
+  syncer.sync();
 }
 
 function changeRemember() {
-  const token = getToken();
-  if (token) storeToken(token);
+  for (const key of [TOKEN_KEY, PASSPHRASE_KEY]) {
+    const value = readSecret(key);
+    if (value) storeSecret(key, value);
+  }
+}
+
+function paintPassphrase() {
+  const input = $("#passphrase");
+  if (readSecret(PASSPHRASE_KEY)) input.dataset.i18nPlaceholder = "passphraseSaved";
+  else delete input.dataset.i18nPlaceholder;
+  input.placeholder = readSecret(PASSPHRASE_KEY) ? t("passphraseSaved") : "";
+}
+
+function savePassphrase() {
+  const input = $("#passphrase");
+  const value = input.value;
+  if (!value) return;
+  storeSecret(PASSPHRASE_KEY, value);
+  input.value = "";
+  paintPassphrase();
+  syncer.recheck();
+  syncer.sync();
+}
+
+function saveSyncTarget() {
+  syncTarget = { repo: $("#syncRepo").value.trim(), branch: $("#syncBranch").value.trim() || DEFAULT_BRANCH };
+  write(local, SYNC_TARGET_KEY, JSON.stringify(syncTarget));
+  syncer.sync();
+}
+
+function stopSync() {
+  syncer.stop();
+  syncTarget = { repo: "", branch: DEFAULT_BRANCH };
+  write(local, SYNC_TARGET_KEY, null);
+  write(local, PASSPHRASE_KEY, null);
+  write(session, PASSPHRASE_KEY, null);
+  $("#syncRepo").value = "";
+  $("#syncBranch").value = DEFAULT_BRANCH;
+  paintPassphrase();
 }
 
 function forgetToken() {
@@ -747,6 +870,7 @@ function forgetToken() {
   write(session, TOKEN_KEY, null);
   checkToken();
   render();
+  syncer.sync();
 }
 
 function updateRepos() {
@@ -840,6 +964,20 @@ function init() {
   });
   $("#remember").addEventListener("change", changeRemember);
   $("#forgetToken").addEventListener("click", forgetToken);
+  $("#syncRepo").value = syncTarget.repo;
+  $("#syncBranch").value = syncTarget.branch;
+  $("#syncRepo").addEventListener("change", saveSyncTarget);
+  $("#syncBranch").addEventListener("change", saveSyncTarget);
+  $("#passphrase").addEventListener("change", savePassphrase);
+  $("#passphrase").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") savePassphrase();
+  });
+  $("#syncNow").addEventListener("click", () => syncer.sync());
+  $("#stopSync").addEventListener("click", stopSync);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") syncer.refresh();
+    else if (syncConfig().ready && syncer.dirty()) syncer.sync();
+  });
   $("#repos").addEventListener("input", updateRepos);
   $("#repos").addEventListener("change", commitRepos);
   $("#generate").addEventListener("click", generate);
@@ -879,6 +1017,9 @@ function init() {
   paintToday();
   render();
   checkToken();
+  paintPassphrase();
+  if (syncConfig().ready) syncer.sync();
+  else paintSync("off");
 }
 
 init();

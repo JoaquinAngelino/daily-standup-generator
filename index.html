@@ -53,6 +53,26 @@
           <p class="hint" data-i18n="reposHint"></p>
           <span id="reposStatus" class="status" role="status"></span>
         </div>
+        <div class="setting">
+          <label class="field">
+            <span class="field-label" data-i18n="syncRepo">Sync to repository</span>
+            <input id="syncRepo" type="text" autocomplete="off" spellcheck="false" placeholder="owner/repo">
+          </label>
+          <label class="field">
+            <span class="field-label" data-i18n="syncBranch">Branch</span>
+            <input id="syncBranch" type="text" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span class="field-label" data-i18n="passphrase">Passphrase</span>
+            <input id="passphrase" type="password" autocomplete="new-password" spellcheck="false">
+          </label>
+          <p class="hint" data-i18n="syncHint"></p>
+          <div class="row">
+            <button id="syncNow" type="button" class="btn" data-i18n="syncNow">Sync now</button>
+            <button id="stopSync" type="button" class="btn" data-i18n="stopSync">Stop syncing</button>
+            <span id="syncStatus" class="status" role="status"></span>
+          </div>
+        </div>
       </section>
 
       <main id="standupView" class="work">
